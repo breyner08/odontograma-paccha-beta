@@ -876,7 +876,7 @@ function buildCapso(r){
   field(X0,350,'Comunidad:','Paccha',484);field(490,350,'Mz.:','',575);field(580,350,'Lote:','',650);field(655,350,'Fecha:',dmy(r.fecha),X1);
   field(X0,376,'Encuestador(a):',ALUMNO,484);
   field(X0,403,'Encuestado(a):',r.nombre,476);field(482,403,'Apoderado*(a):',r.apod||'',X1);
-  field(X0,430,'Edad:',r.edad?String(r.edad):'',210);field(216,430,'Sexo:',r.sexo||'',340);field(346,430,'Grado de Instrucción**:',com?(r.instr||''):[r.grado,r.colegio].filter(Boolean).join(' – '),X1);
+  field(X0,430,'Edad:',r.edad?String(r.edad):'',210);field(216,430,'Sexo:',r.sexo||'',340);field(346,430,'Grado de Instrucción**:',!/^\d+º/.test(r.grado||'')?(r.instr||''):[r.grado,r.colegio].filter(Boolean).join(' – '),X1);
   y=470;D.text(X0,y,'I.',SZ,{b:1}).text(162,y,'SECCION CONOCIMIENTOS',SZ,{b:1});y-=8;
   Q('1','Mencione 5 alimentos que causen daño a sus dientes y porque?',[(raw.f1||[]).join(', '),A.q1why?'porque '+A.q1why:''].filter(Boolean).join(' — '));
   Q('2','¿Porque es importante cepillarse los dientes?',A.q2);
@@ -1046,7 +1046,7 @@ const capPersist=()=>{G.resp=capDerive(G.raw).R;LS.set(LSP+'capdraft',G)};
 $('#cGrado').innerHTML='<option value="">—</option>'+GRADOS.map(g=>'<option>'+g+'</option>').join('');
 const INSTR=['Sin instrucción','Inicial','Primaria incompleta','Primaria completa','Secundaria incompleta','Secundaria completa','Superior técnica incompleta','Superior técnica completa','Superior universitaria incompleta','Superior universitaria completa'];
 $('#cInstr').innerHTML='<option value="">—</option>'+INSTR.map(g=>'<option>'+g+'</option>').join('');
-const capCom=()=>/^comunidad/i.test(G.grado||'');
+const capCom=()=>!/^\d+º/.test(G.grado||'');
 const capMenor=()=>G.edad!==''&&G.edad!=null&&+G.edad>0&&+G.edad<12;
 const capInstrShow=()=>{$('#cInstrW').classList.toggle('hide',!capCom());$('#cApodW').classList.toggle('hide',!capMenor());$('#cInstrL').textContent=capMenor()?'Grado de instrucción del apoderado':'Grado de instrucción'};
 $('#cApod').oninput=e=>{G.apod=e.target.value;capPersist()};
@@ -1186,7 +1186,7 @@ function renderCapList(){
     const bpc=document.createElement('button');bpc.className='btn sm';bpc.textContent='PDF';bpc.onclick=()=>openPDF(r,'capso');bx.append(bpc,be,bd);el.appendChild(bx);box.appendChild(el)});
 }
 const CAP_HEAD=['Fecha','TOMA CAPSO','NOMBRES Y APELLIDOS','EDAD','sexo','GRADO Y SECCIÓN','COLEGIO / GRUPO','GRADO DE INSTRUCCIÓN','APODERADO',...CAP_ORDER,'SUMA','ACTITUD','ACTITUD (texto)','CONOCIMIENTOS CORRECTOS (0-9)'];
-function capRow(r){const S=capScores(r);return[toDMY(r.fecha),r.toma,r.nombre,r.edad,r.sexo==='Femenino'?0:r.sexo==='Masculino'?1:'',r.grado||'',r.colegio||'',/^comunidad/i.test(r.grado||'')?(r.instr||''):(r.grado||''),r.apod||'',...CAP_ORDER.map(k=>{const v=capCode(k,(r.resp||{})[k]);return v==null?'':v}),S.suma==null?'':S.suma,S.suma==null?'':(S.suma>=CAP_CORTE?0:1),S.actitud,S.con==null?'':S.con]}
+function capRow(r){const S=capScores(r);return[toDMY(r.fecha),r.toma,r.nombre,r.edad,r.sexo==='Femenino'?0:r.sexo==='Masculino'?1:'',r.grado||'',r.colegio||'',!/^\d+º/.test(r.grado||'')?(r.instr||''):(r.grado||''),r.apod||'',...CAP_ORDER.map(k=>{const v=capCode(k,(r.resp||{})[k]);return v==null?'':v}),S.suma==null?'':S.suma,S.suma==null?'':(S.suma>=CAP_CORTE?0:1),S.actitud,S.con==null?'':S.con]}
 function capRows(){return allCapso().sort((a,b)=>(a.creado||0)-(b.creado||0)).map(capRow)}
 window.__capRefresh=()=>{renderList();if(!$('#vRes').classList.contains('hide'))renderRes()};
 
