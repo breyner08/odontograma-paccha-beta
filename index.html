@@ -519,7 +519,7 @@ function renderEst(){
     r.append(seg,inp);box.appendChild(r);
   });
 }
-$('#fGrado').onchange=e=>{F.grado=e.target.value;persist()};
+$('#fGrado').onchange=e=>{F.grado=e.target.value;if(/^comunidad/i.test(F.grado)&&F.colegio==='I.E. Dos de Mayo'){F.colegio='';$('#fCol').value=''}persist()};
 $('#fFecha').onchange=e=>{F.fecha=e.target.value;setAge()};
 $('#fObs').oninput=e=>{F.obs=e.target.value;persist()};
 $('#fTipo').onchange=e=>{F.tipo=e.target.value;toggleCtrl();persist();prefill()};
@@ -735,9 +735,9 @@ function buildFicha(r){
   D.text(616,213,'Género:',10).rect(694,201,40,16).rect(774,201,40,16).text(714,213,'M',10,{a:'c'}).text(794,213,'F',10,{a:'c'});
   if(r.sexo==='Masculino')D.ell(714,209,23,11,1.4);if(r.sexo==='Femenino')D.ell(794,209,23,11,1.4);
   D.text(134,229,'Dirección:',10).line(184,231,609,231,0.6).text(188,228,r.dir||'',10);
-  const gm=(r.grado||'').match(/^(\d+º)\s*(\S+)$/);
-  D.text(134,245,'Colegio:',10).line(178,247,474,247,0.6).text(182,244,r.colegio||'',10);
-  D.text(496,245,'Grado:',10).line(532,247,592,247,0.6).text(562,244,gm?gm[1]:(r.grado||''),10,{a:'c'});
+  const com=/^comunidad/i.test(r.grado||'');const gm=com?null:(r.grado||'').match(/^(\d+º)\s*(\S+)$/);
+  D.text(134,245,'Colegio:',10).line(178,247,474,247,0.6).text(182,244,com?'':(r.colegio||''),10);
+  D.text(496,245,'Grado:',10).line(532,247,592,247,0.6).text(562,244,com?'':(gm?gm[1]:(r.grado||'')),10,{a:'c'});
   D.text(616,245,'Sección:',10).line(662,247,727,247,0.6).text(694,244,gm?gm[2]:'',10,{a:'c'});
   D.text(134,276,'II.- EXAMEN ESTOMATOLÓGICO:',10,{b:1}).text(134+tw('II.- EXAMEN ESTOMATOLÓGICO: ',10,1),276,'(regístrese únicamente lo anormal)',10);
   const ES=[['ATM',134,305],['Ganglios',134,321],['Queilitis',496,305],['Lengua',496,321],['Aftas',857,305],['Otros',857,321]];
@@ -818,7 +818,7 @@ function buildFicha(r){
   ['0 = Pieza o Superficie sana','1 = Pieza o Superficie con caries dental evidente (cavidad)','2 = Pieza o Superficie obturada con caries dental','3 = Pieza o Superficie con obturación o corona en buen estado','4 = Pieza perdida por caries dental','5 = Pieza perdida por otras razones','6 = Pieza con sellante de fosas y fisuras en buen estado','7 = Pieza empleada como pilar de puente','8 = Pieza permanente no erupcionada','9 = No registrable','10 = Traumatismo','11 = Hipoplasia'].forEach((t,i)=>D.text(439,128+i*19,t,8.5));
   D.text(419,397,'HOJA DE EVOLUCIÓN',12,{b:1,a:'c'});
   D.text(157,428,'Nombre,-',11.5).line(244,438,700,438,1.6).text(250,433,r.nombre,11);
-  D.text(157,458,'Colegio,-',11.5).line(244,468,700,468,1.6).text(250,463,r.colegio||'',11);
+  D.text(157,458,'Colegio,-',11.5).line(244,468,700,468,1.6).text(250,463,/^comunidad/i.test(r.grado||'')?'':(r.colegio||''),11);
   const tb=(y0,cols,heads,nrows)=>{const xs=cols;D.rect(xs[0],y0,xs[xs.length-1]-xs[0],30*(nrows+1),1.2);for(let i=1;i<xs.length-1;i++)D.line(xs[i],y0,xs[i],y0+30*(nrows+1),1.2);for(let j=1;j<=nrows;j++)D.line(xs[0],y0+30*j,xs[xs.length-1],y0+30*j,1.2);heads.forEach((h,i)=>D.text((xs[i]+xs[i+1])/2,y0+20,h,11,{a:'c'}))};
   tb(480,[137,244,544,700],['FECHA','TRATAMIENTO','OBSERVACIONES'],12);
   D.text(419,893,'SITUACIÓN NUTRICIONAL',10.5,{b:1,a:'c'});
@@ -887,44 +887,165 @@ function capCode(k,v){const q=CQ[k];if(v==null||v==='')return null;if(q.type==='
 function capScores(r){const R=r.resp||{};const act=CAP_ACT.map(k=>capCode(k,R[k]));const suma=act.every(x=>x!=null)?act.reduce((a,b)=>a+b,0):null;
   const con=CAP_CON.map(k=>capCode(k,R[k]));const conN=con.every(x=>x!=null)?con.filter(x=>x===0).length:null;
   return{suma,actitud:suma==null?'':(suma>=CAP_CORTE?'Favorable':'Desfavorable'),con:conN}}
-function capNew(){return{id:null,nombre:'',edad:'',sexo:'',grado:'',colegio:'I.E. Dos de Mayo',toma:CAP_TOMAS[0],fecha:today(),resp:{},creado:null}}
-let G=LS.get(LSP+'capdraft',null)||capNew();
-const capPersist=()=>LS.set(LSP+'capdraft',G);
+/* ---- CAPSO: respuestas tal cual el cuestionario; la clave se aplica sola ---- */
+const NZ=s=>' '+norm(s).replace(/[^a-z0-9ñ ]/g,' ').replace(/\s+/g,' ').trim()+' ';
+const hasAny=(t,arr)=>arr.some(w=>w.startsWith('=')?t.includes(' '+w.slice(1)+' '):t.includes(w));
+const F_CARIO=['dulce','caramel','chocolat','golosin','gaseosa','coca cola','cocacola','inca kola','inka kola','kola','refresco','jugo','galleta','torta','pastel','keke','queque','bizcoch','helado','azucar','chupet','chicle','mermelad','miel','alfajor','marciano','turron','manjar','frugo','paneton','=dona','=donas','gelatina','mazamorra','arroz con leche','cachito','wafer','confite','chancaca','raspadilla','cremolada','chocoteja','sublime','triangulo','churro','pan dulce','picaron','cifrut','chupe de fresa','leche condensada','gomita','mashmelo','marshmallow','malvavisco','cereal azucar','pulp','tampico','volt','energizante','cuates','=pie'];
+const F_NO=['fruta','manzana','platano','pera','naranja','mandarina','=uva','=uvas','mango','papaya','sandia','=pina','fresa','durazno','=limon','verdura','ensalada','zanahoria','lechuga','tomate','=agua','queso','huevo','carne','pollo','pescado','atun','=arroz','menestra','frejol','lenteja','=papa','=papas','camote','=yuca','sopa','caldo','=leche','=te','choclo','=mani','nuez','nueces','palta','pepino','brocoli','espinaca','quinua','pescadito'];
+const F_AMB=['=pan','=panes','galleta salada','papas fritas','papitas','chifle','canchita','chizito','yogurt','yogur','cereal','emoliente','cafe','avena','salchipapa','pizza','frutas secas','pasas','chicha'];
+function learned(){return LS.get(LSP+'dict',{})}
+function setLearned(k,v){const d=learned();if(v==null)delete d[k];else d[k]=v;LS.set(LSP+'dict',d)}
+function foodClass(item){const k=norm(item).trim();const L=learned();if(k in L)return{c:L[k],src:'tú'};const t=NZ(item);
+  if(hasAny(t,F_CARIO))return{c:true,src:'clave'};if(hasAny(t,F_AMB))return{c:null,src:'dudoso'};if(hasAny(t,F_NO))return{c:false,src:'clave'};return{c:null,src:''}}
+const splitItems=s=>String(s||'').split(/[,;\n]|\s+y\s+|\s+e\s+|\//i).map(x=>x.trim()).filter(Boolean);
+function parseMonths(s){const t=NZ(s);if(!t.trim())return null;
+  if(/dos veces al ano|2 veces al ano|semestr|medio ano|cada seis meses|cada 6 meses/.test(t))return 6;
+  if(/una vez al ano|1 vez al ano|cada ano|anual|cada un ano/.test(t))return 12;
+  if(/mensual|cada mes/.test(t))return 1;
+  const W={un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12};
+  const m=t.match(/(\d+(?:[.,]\d+)?|un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)\s*(mes|meses|ano|anos|semana|semanas|dia|dias)?/);
+  if(!m)return null;let n=W[m[1]]!=null?W[m[1]]:parseFloat(m[1].replace(',','.'));const u=m[2]||'';
+  if(u.startsWith('ano'))n*=12;else if(u.startsWith('semana'))n=n/4.3;else if(u.startsWith('dia'))n=n/30;return Math.round(n*10)/10}
+const COMP={
+  p6:{all:true,parts:[['evitar caries',['caries','picad','careado','cariado','agujer','huec','pudr','=dano','danen','danar','malogr','destru','=sanos','dientes sanos']],['evitar enfermedad de encías / limpieza o higiene',['encia','gingiv','sangr','periodont','limpi','higien','sarro','placa','mal aliento','bacteria','microb','infecc','=aseo','=asear']]],yes:'Sabe',no:'No sabe'},
+  p7:{all:true,parts:[['dientes',['diente','muela','dentadura']],['lengua',['lengua']],['encía',['encia']]],yes:'Sabe',no:'No sabe'},
+  'p10.1':{all:false,parts:[['fortalecer / proteger / prevenir caries',['fortalec','proteg','previen','prevenir','evita','contra la caries','endurec','fuerte','resistente','refuerz']]],yes:'Sabe',no:'No sabe'},
+  'p10.2':{all:false,parts:[['pescado',['pescado','=pez','pecado','atun','sardina','jurel','bonito']],['té negro o verde',['=te','=tes','te verde','te negro']],['garbanzos',['garbanz']]],yes:'Sabe',no:'No sabe'},
+  'p10.3':{all:true,parts:[['pasta dental',['pasta','dentifric','crema dental','crema de diente','colgate','kolynos','dental']],['sal',['=sal']]],yes:'Sabe',no:'No sabe'},
+  p12:{all:true,parts:[['cepillo',['cepill']],['pasta dental',['pasta','crema dental','crema de diente','dentifric','colgate','kolynos']]],yes:'Usa',no:'No usa'},
+  p15:{all:false,parts:[['acude al dentista / establecimiento de salud',['dentista','odontolog','=posta','centro de salud','hospital','consultorio','clinica','doctor','medico','=essalud','establecimiento']]],yes:'Sí',no:'No'},
+  p18:{all:false,parts:[['porque contiene flúor',['fluor','fluo']]],yes:'Sí',no:'No'}
+};
+function compEval(key,text,ovp){const c=COMP[key];const t=NZ(text);const det=c.parts.map(([lab,kw],i)=>{const o=ovp&&ovp[i];return o!=null?o:hasAny(t,kw)});const ok=c.all?det.every(Boolean):det.some(Boolean);return{det,v:ok?c.yes:c.no}}
+function capDerive(raw){
+  const A=raw.a||{},O=raw.ovr||{},R={},why={},st={};
+  const set=(k,v,w,s)=>{if(O[k]!=null){R[k]=O[k];st[k]='manual';why[k]=w||''}else{R[k]=v;st[k]=v==null?(s||'falta'):(s||'auto');why[k]=w||''}};
+  // P1 alimentos que dañan
+  {const it=(raw.f1||[]);if(!it.length)set('p5',null,'');else{const cl=it.map(x=>({x,...foodClass(x)}));const non=cl.filter(c=>c.c===false),unk=cl.filter(c=>c.c==null);
+    if(non.length)set('p5','No sabe','No cariogénico: '+non.map(c=>c.x).join(', '));else if(unk.length)set('p5',null,'Clasifica: '+unk.map(c=>c.x).join(', '),'revisar');else set('p5','Sabe','Todos cariogénicos ('+it.length+')')}}
+  // P2
+  {const tx=A.q2||'';if(!tx.trim())set('p6',null);else{const e=compEval('p6',tx,(raw.cp||{}).p6);set('p6',e.v,COMP.p6.parts.map((p,i)=>(e.det[i]?'✓ ':'✗ ')+p[0]).join(' · '))}}
+  {const tx=A.q3||'';if(!tx.trim())set('p7',null);else{const e=compEval('p7',tx,(raw.cp||{}).p7);set('p7',e.v,COMP.p7.parts.map((p,i)=>(e.det[i]?'✓ ':'✗ ')+p[0]).join(' · '))}}
+  {const m=parseMonths(A.q4);if(m==null)set('p8',null,A.q4?'No entendí el tiempo; elige manualmente':'',A.q4?'revisar':'falta');else set('p8',m===6?'Sabe':'No sabe','≈ '+m+' meses')}
+  {const t=NZ(A.q5||'');if(!t.trim())set('p9',null);else{let m=null;if(/nacer|recien nacido|primer diente|primeros dientes|antes del ano|antes del primer ano|=bebe/.test(t)||/ bebe /.test(t))m=6;else m=parseMonths(A.q5);
+    if(m==null)set('p9',null,'No entendí la edad; elige manualmente','revisar');else set('p9',m<12?'Sabe':'No sabe',m<12?'antes del primer año':'≈ '+(m>=12?(Math.round(m/12*10)/10)+' años':m+' meses'))}}
+  set('p10',A.q6||null);
+  if(A.q6==='No'){['p10.1','p10.2','p10.3'].forEach(k=>set(k,'No sabe','no sabe qué es el flúor'))}
+  else{[['p10.1','q61'],['p10.2','q62'],['p10.3','q63']].forEach(([k,q])=>{const tx=A[q]||'';if(!tx.trim()){set(k,A.q6==='Sí'?null:null);return}const e=compEval(k,tx,(raw.cp||{})[k]);set(k,e.v,COMP[k].parts.map((p,i)=>(e.det[i]?'✓ ':'✗ ')+p[0]).join(' · '))})}
+  // P7 consumo ayer
+  {const it=raw.f7||[];const nada=/^(nada|ninguno|ninguna|no)$/i.test(norm(A.q7nada||''));
+    if(A.q7none)set('p11','No consume','No consumió nada fuera de las comidas');else if(!it.length)set('p11',null);
+    else{const cl=it.map(x=>({x,...foodClass(x)}));const ca=cl.filter(c=>c.c===true),unk=cl.filter(c=>c.c==null);
+      if(ca.length)set('p11','Consume','Azucarados: '+ca.map(c=>c.x).join(', '));else if(unk.length)set('p11',null,'Clasifica: '+unk.map(c=>c.x).join(', '),'revisar');else set('p11','No consume','Ninguno azucarado')}}
+  {const tx=A.q9||'';if(!tx.trim())set('p12',null);else{const e=compEval('p12',tx,(raw.cp||{}).p12);set('p12',e.v,COMP.p12.parts.map((p,i)=>(e.det[i]?'✓ ':'✗ ')+p[0]).join(' · '))}}
+  set('p13',A.q10!=null&&A.q10!==''?String(A.q10):null);
+  {const t=NZ(A.q101||'');const cp=(raw.cp||{});
+    if(!t.trim()&&cp.p131==null)set('p13.1',null);else{const v=cp.p131!=null?cp.p131:(/cada comida|despues de comer|despues de cada|luego de cada|despues de las comidas/.test(t)||(/desayun/.test(t)&&/almuerz/.test(t)&&/cena|comida de la noche/.test(t)));set('p13.1',v?'Sí':'No')}
+    if(!t.trim()&&cp.p132==null)set('p13.2',null);else{const v=cp.p132!=null?cp.p132:/dormir|acostar|=noche|en la noche|por la noche|antes de la cama/.test(t)||/ noche /.test(t);set('p13.2',v?'Sí':'No')}}
+  {const t=NZ(A.q11||'');if(!t.trim())set('p14',null);else if(/nunca|no ha ido|no fue|no he ido|no recuerd/.test(t))set('p14','Más de 6 meses','nunca o no recuerda');else{const m=parseMonths(A.q11);if(m==null)set('p14',null,'No entendí el tiempo; elige manualmente','revisar');else set('p14',m<=6?'Menos de 6 meses':'Más de 6 meses','≈ '+m+' meses')}}
+  {const tx=A.q12||'';if(!tx.trim())set('p15',null);else{const e=compEval('p15',tx,(raw.cp||{}).p15);set('p15',e.v,e.det[0]?'busca solución profesional':'no menciona ir al dentista')}}
+  {const t=NZ(A.q13||'');if(!t.trim())set('p16',null);else if(/^ (nada|ninguno|ninguna|no|no usa|no uso|ningun) $/.test(t))set('p16','No','no usa remedios caseros');else set('p16','Sí','usa: '+A.q13.trim())}
+  R['p16.1']=A.q13&&R.p16==='Sí'?A.q13.trim():'';
+  {const brand=A.q14||'';const t=NZ(brand);let fl=raw.salFl;if(fl==null&&t.trim())fl=/emsal|quimpac|fluor/.test(t)?true:(/no tiene|no mostro|no hay|sin sal/.test(t)?false:null);
+    if(!t.trim()&&fl==null)set('p17',null);else if(fl==null)set('p17',null,'¿El paquete dice flúor? Márcalo abajo','revisar');else set('p17',fl?'Consume':'No consume',fl?'sal fluorurada':'sal sin flúor')}
+  {const tx=A.q16||'';if(!tx.trim())set('p18',null);else{const e=compEval('p18',tx,(raw.cp||{}).p18);set('p18',e.v,e.det[0]?'elige por el flúor':'no menciona el flúor')}}
+  CAP_ACT.forEach(k=>set(k,(raw.lik||{})[k]||null));
+  return{R,why,st};
+}
+function capNew(){return{id:null,nombre:'',edad:'',sexo:'',grado:'',colegio:'I.E. Dos de Mayo',toma:CAP_TOMAS[0],fecha:today(),raw:{a:{},ovr:{},cp:{},f1:[],f7:[],lik:{}},resp:{},creado:null}}
+let G=LS.get(LSP+'capdraft',null);if(!G||!G.raw)G=capNew();
+const capPersist=()=>{G.resp=capDerive(G.raw).R;LS.set(LSP+'capdraft',G)};
 $('#cGrado').innerHTML='<option value="">—</option>'+GRADOS.map(g=>'<option>'+g+'</option>').join('');
 $('#cToma').innerHTML=CAP_TOMAS.map(t=>'<option>'+t+'</option>').join('');
 let capMissShow=false,capConfirm=null;
 function capFill(){
   $('#cNom').value=G.nombre;$('#cEdad').value=G.edad;$('#cSexo').value=G.sexo;$('#cGrado').value=G.grado;$('#cCol').value=G.colegio||'';$('#cToma').value=G.toma;$('#cFecha').value=G.fecha;
   $('#capTitle').textContent=G.id?'Editando CAPSO':'CAPSO · datos de la persona';$('#capSave').textContent=G.id?'Guardar cambios':'Guardar CAPSO';
-  capRender();
+  capPersist();capRender();
 }
-function capMissing(){return CAP_ORDER.filter(k=>!CQ[k].opt&&(G.resp[k]==null||G.resp[k]===''))}
+function capMissing(){const D=capDerive(G.raw);return CAP_ORDER.filter(k=>!CQ[k].opt&&(D.R[k]==null||D.R[k]===''))}
+/* preguntas tal cual el cuestionario (documento 7) */
+const QDOC=[
+ {sec:'I. SECCIÓN CONOCIMIENTOS',q:[
+  {n:'1',t:'Mencione 5 alimentos que causen daño a sus dientes y ¿por qué?',type:'foods',f:'f1',out:['p5'],ph:'Escribe y pulsa Enter o coma: dulces, gaseosa, galletas…',ex:'q1why',exPh:'¿Por qué? (opcional)'},
+  {n:'2',t:'¿Por qué es importante cepillarse los dientes?',type:'text',a:'q2',out:['p6'],comp:'p6'},
+  {n:'2.1',t:'¿Qué elementos debe emplear para la limpieza de la boca?',type:'text',a:'q21',out:[]},
+  {n:'3',t:'¿Qué partes de la boca tiene que limpiar diariamente?',type:'text',a:'q3',out:['p7'],comp:'p7'},
+  {n:'4',t:'¿Cada cuánto tiempo se debe ir al dentista? (en meses)',type:'text',a:'q4',out:['p8'],chips:['6 meses','1 año','cuando duele']},
+  {n:'5',t:'¿A qué edad se debería ir por primera vez al dentista?',type:'text',a:'q5',out:['p9'],chips:['antes del año','al salir el primer diente','2 años','5 años']},
+  {n:'6',t:'Sabe usted ¿qué es el flúor?',type:'yn',a:'q6',out:['p10']},
+  {n:'6.1',t:'¿Qué acción tiene?',type:'text',a:'q61',out:['p10.1'],comp:'p10.1',dep:true},
+  {n:'6.2',t:'¿Qué alimentos tienen flúor?',type:'text',a:'q62',out:['p10.2'],comp:'p10.2',dep:true,hint:'La sal NO cuenta aquí (flúor natural).'},
+  {n:'6.3',t:'¿En qué otros productos se puede encontrar el flúor?',type:'text',a:'q63',out:['p10.3'],comp:'p10.3',dep:true}]},
+ {sec:'II. SECCIÓN PRÁCTICAS',q:[
+  {n:'7',t:'¿Qué alimentos consumió usted ayer? (fuera de las tres comidas principales)',type:'foods',f:'f7',out:['p11'],ph:'Escribe y pulsa Enter o coma',none:true},
+  {n:'8',t:'De los alimentos que consumió ayer, ¿a alguno le agregó azúcar? ¿Cuáles?',type:'text',a:'q8',out:[]},
+  {n:'9',t:'¿Qué emplea usted para la limpieza de su boca?',type:'text',a:'q9',out:['p12'],comp:'p12',chips:['cepillo y pasta','solo cepillo','enjuague','hilo dental']},
+  {n:'10',t:'¿Cuántas veces al día se cepilla los dientes?',type:'num',a:'q10',out:['p13']},
+  {n:'10.1',t:'¿En qué momentos del día se cepilla los dientes?',type:'text',a:'q101',out:['p13.1','p13.2'],chips:['después de cada comida','al levantarse','antes de dormir','después del desayuno']},
+  {n:'11',t:'¿Hace cuánto tiempo visitó al dentista en el último año?',type:'text',a:'q11',out:['p14'],chips:['3 meses','6 meses','1 año','nunca']},
+  {n:'11.1',t:'¿En qué lugar lo atendieron?',type:'text',a:'q111',out:[]},
+  {n:'11.2',t:'¿Cuál fue el motivo de su visita?',type:'text',a:'q112',out:[]},
+  {n:'12',t:'¿Qué es lo que hace cuando tiene dolor de muela?',type:'text',a:'q12',out:['p15'],comp:'p15',chips:['va al dentista','toma pastilla','remedio casero','nada']},
+  {n:'13',t:'¿Qué remedio o producto casero emplea cuando tiene un dolor de muela?',type:'text',a:'q13',out:['p16'],chips:['ninguno','clavo de olor','sal con agua','matico']},
+  {n:'14',t:'¿Podría mostrarme su paquete de sal? (marca y concentración de flúor)',type:'salt',a:'q14',out:['p17']},
+  {n:'15',t:'¿Usa usted pasta dental?',type:'yn',a:'q15',out:[],ex:'q151',exPh:'15.1 ¿Por qué?'},
+  {n:'16',t:'¿En qué se basa para elegir la marca de pasta dental que compra?',type:'text',a:'q16',out:['p18'],chips:['precio','porque tiene flúor','sabor','costumbre']}]},
+ {sec:'III. SECCIÓN ACTITUDES',q:CAPQ[2].items.map((it,i)=>({n:String(17+i),t:it.t.replace(/^P\d+\.\s*/,''),type:'lik',k:it.k,out:[it.k]}))}];
+const OPTS=k=>CQ[k].kind==='num'?CQ[k].opts:CQ[k].opts;
+function pill(D,k){const v=D.R[k],s=D.st[k];const good=(k==='p11'||k==='p16')?v===CQ[k].opts[1]:v===CQ[k].opts[0];const col=s==='revisar'?'var(--warn)':v==null?'var(--tx2)':(CQ[k].kind==='num'?'var(--tx)':good?'var(--ok)':'var(--err)');
+  const lab=CQ[k].t.replace(/^P[\d.]+\.\s*/,'').slice(0,40);
+  return '<div class="row" style="gap:6px;margin-top:6px;font-size:13px"><span style="font-weight:700;color:'+col+'">→ '+(v==null?(s==='revisar'?'Revisar':'Sin respuesta'):esc(v))+'</span>'+(CQ[k].kind==='num'||!['p13.1','p13.2'].includes(k)?'':'<span class="muted">('+esc(k==='p13.1'?'después de cada comida':'antes de dormir')+')</span>')
+   +(s==='manual'?'<span class="badge">manual</span>':s==='auto'?'<span class="muted">(clave)</span>':'')
+   +(D.why[k]?'<span class="muted" style="flex-basis:100%">'+esc(D.why[k])+'</span>':'')
+   +'<button class="btn sm" data-cyc="'+k+'">Cambiar</button>'+(s==='manual'?'<button class="btn sm" data-auto="'+k+'">Usar la clave</button>':'')+'</div>'}
 function capRender(){
-  const box=$('#capQ');box.innerHTML='';const miss=new Set(capMissShow?capMissing():[]);
-  const noF=G.resp['p10']==='No';
-  CAPQ.forEach(sec=>{
-    const c=document.createElement('div');c.className='card';c.innerHTML='<h2>'+sec.titulo+'</h2><div class="muted" style="margin:-4px 0 6px">'+sec.desc+'</div>';
-    sec.items.forEach(q=>{
-      const it=document.createElement('div');it.className='capi'+(miss.has(q.k)?' miss':'');
-      it.innerHTML='<div class="qt">'+esc(q.t)+'</div>'+(q.help?'<div class="qh">'+esc(q.help)+'</div>':'');
-      if(q.type==='text'){const inp=document.createElement('input');inp.value=G.resp[q.k]||'';inp.placeholder='Opcional';inp.oninput=e=>{G.resp[q.k]=e.target.value;capPersist()};it.appendChild(inp)}
-      else{const seg=document.createElement('div');seg.className='segw';
-        const locked=noF&&(q.k==='p10.1'||q.k==='p10.2'||q.k==='p10.3');
-        q.opts.forEach(o=>{const b=document.createElement('button');b.textContent=o;if(G.resp[q.k]===o)b.className='on';b.disabled=locked;
-          b.onclick=()=>{G.resp[q.k]=G.resp[q.k]===o?null:o;if(q.k==='p10'&&G.resp.p10==='No'){['p10.1','p10.2','p10.3'].forEach(k=>G.resp[k]='No sabe')}capPersist();capRender()};seg.appendChild(b)});
-        it.appendChild(seg)}
-      c.appendChild(it);
-    });
-    box.appendChild(c);
-  });
-  const S=capScores(G),nm=capMissing().length,tot=CAP_ORDER.filter(k=>!CQ[k].opt).length;
-  $('#capRes').innerHTML='<div class="kpi"><div><b>'+(tot-nm)+'/'+tot+'</b><span class="muted">respondidas</span></div><div><b>'+(S.con==null?'—':S.con+'/9')+'</b><span class="muted">conocimientos correctos</span></div><div><b>'+(S.suma==null?'—':S.suma)+'</b><span class="muted">puntaje de actitudes (8–24)</span></div><div><b>'+(S.actitud||'—')+'</b><span class="muted">actitud (corte 18,7)</span></div></div>';
+  const box=$('#capQ');box.innerHTML='';const D=capDerive(G.raw);const miss=new Set(capMissShow?capMissing():[]);const A=G.raw.a;
+  QDOC.forEach(sec=>{const c=document.createElement('div');c.className='card';c.innerHTML='<h2>'+sec.sec+'</h2>';
+    sec.q.forEach(q=>{const it=document.createElement('div');it.className='capi'+(q.out.some(k=>miss.has(k))?' miss':'');
+      const dis=q.dep&&A.q6==='No';
+      it.innerHTML='<div class="qt">'+q.n+'. '+esc(q.t)+'</div>'+(q.hint?'<div class="qh">'+esc(q.hint)+'</div>':'')+(dis?'<div class="qh">No sabe qué es el flúor: se registra «No sabe».</div>':'');
+      const wrap=document.createElement('div');it.appendChild(wrap);
+      if(q.type==='foods'){
+        const list=G.raw[q.f]=G.raw[q.f]||[];const chips=document.createElement('div');chips.className='segw';chips.style.marginBottom='6px';
+        list.forEach((x,i)=>{const fc=foodClass(x);const b=document.createElement('button');b.style.flex='0 0 auto';
+          b.style.borderColor=fc.c===true?'var(--c1)':fc.c===false?'var(--c6)':'var(--warn)';b.innerHTML=esc(x)+' <small style="opacity:.75">'+(fc.c===true?'· cariogénico':fc.c===false?'· no cariogénico':'· ¿?')+'</small> ✕';
+          b.title='Toca el nombre para cambiar la clasificación; la ✕ lo quita';
+          b.onclick=e=>{const r=b.getBoundingClientRect();if(e.clientX>r.right-22){list.splice(i,1)}else{const k=norm(x).trim();const nv=fc.c===true?false:fc.c===false?null:true;setLearned(k,nv)}capPersist();capRender()};chips.appendChild(b)});
+        wrap.appendChild(chips);
+        const inp=document.createElement('input');inp.placeholder=q.ph;const add=()=>{const its=splitItems(inp.value);if(its.length){list.push(...its);inp.value='';if(q.none)A.q7none=false;capPersist();capRender();const n=$('#capQ').querySelector('[data-fi="'+q.f+'"]');n&&n.focus()}};
+        inp.dataset.fi=q.f;inp.onkeydown=e=>{if(e.key==='Enter'||e.key===','){e.preventDefault();add()}};inp.onblur=add;wrap.appendChild(inp);
+        if(q.none){const nb=document.createElement('button');nb.className='btn sm'+(A.q7none?' pri':'');nb.style.marginTop='6px';nb.textContent='No consumió nada fuera de las comidas';nb.onclick=()=>{A.q7none=!A.q7none;if(A.q7none)G.raw[q.f]=[];capPersist();capRender()};wrap.appendChild(nb)}
+        if(q.ex){const e2=document.createElement('input');e2.placeholder=q.exPh;e2.style.marginTop='6px';e2.value=A[q.ex]||'';e2.oninput=ev=>{A[q.ex]=ev.target.value;capPersist()};wrap.appendChild(e2)}
+      }else if(q.type==='text'||q.type==='salt'){
+        const inp=document.createElement('input');inp.value=A[q.a]||'';inp.disabled=dis;inp.placeholder=q.type==='salt'?'Marca de la sal (p. ej. EMSAL)':'Escribe la respuesta tal cual';
+        inp.oninput=e=>{A[q.a]=e.target.value;capPersist();const D2=capDerive(G.raw);it.querySelectorAll('.pillbox').forEach((pb,j)=>pb.innerHTML=pill(D2,q.out[j]));};inp.onchange=()=>capRender();wrap.appendChild(inp);
+        if(q.chips&&!dis){const cc=document.createElement('div');cc.className='segw';cc.style.marginTop='6px';q.chips.forEach(ch=>{const b=document.createElement('button');b.style.flex='0 0 auto';b.style.fontSize='12.5px';b.textContent='+ '+ch;b.onclick=()=>{A[q.a]=A[q.a]&&A[q.a].trim()?A[q.a].trim()+', '+ch:ch;capPersist();capRender()};cc.appendChild(b)});wrap.appendChild(cc)}
+        if(q.type==='salt'){const lb=document.createElement('label');lb.className='row';lb.style.cssText='gap:8px;margin-top:8px;font-size:14px';lb.innerHTML='<input type="checkbox" style="width:22px;height:22px;min-height:22px"'+(D.R.p17==='Consume'?' checked':'')+'> El paquete indica flúor (sal fluorurada)';lb.querySelector('input').onchange=e=>{G.raw.salFl=e.target.checked;capPersist();capRender()};wrap.appendChild(lb)}
+        if(q.comp&&!dis&&(A[q.a]||'').trim()){const e=compEval(q.comp,A[q.a],(G.raw.cp||{})[q.comp]);const cc=document.createElement('div');cc.className='segw';cc.style.marginTop='6px';
+          COMP[q.comp].parts.forEach(([lab],i)=>{const b=document.createElement('button');b.style.flex='0 0 auto';b.style.fontSize='12.5px';b.className=e.det[i]?'on':'';b.textContent=(e.det[i]?'✓ ':'✗ ')+lab;b.title='Toca para corregir si la app no lo detectó bien';
+            b.onclick=()=>{G.raw.cp=G.raw.cp||{};const arr=G.raw.cp[q.comp]=G.raw.cp[q.comp]||[];arr[i]=!e.det[i];capPersist();capRender()};cc.appendChild(b)});wrap.appendChild(cc)}
+        if(q.n==='10.1'&&(A.q101||'').trim()){const cc=document.createElement('div');cc.className='segw';cc.style.marginTop='6px';[['p131','después de cada comida','p13.1'],['p132','antes de dormir','p13.2']].forEach(([ck,lab,k])=>{const on=D.R[k]==='Sí';const b=document.createElement('button');b.style.flex='0 0 auto';b.style.fontSize='12.5px';b.className=on?'on':'';b.textContent=(on?'✓ ':'✗ ')+lab;b.onclick=()=>{G.raw.cp[ck]=!on;capPersist();capRender()};cc.appendChild(b)});wrap.appendChild(cc)}
+      }else if(q.type==='yn'||q.type==='num'||q.type==='lik'){
+        const seg=document.createElement('div');seg.className='segw';const opts=q.type==='yn'?['Sí','No']:q.type==='num'?['0','1','2','3','4 o más']:C_LIK;
+        const curv=q.type==='lik'?(G.raw.lik||{})[q.k]:A[q.a];
+        opts.forEach(o=>{const b=document.createElement('button');b.textContent=o;if(curv===o)b.className='on';b.onclick=()=>{if(q.type==='lik'){G.raw.lik=G.raw.lik||{};G.raw.lik[q.k]=curv===o?null:o}else A[q.a]=curv===o?null:o;capPersist();capRender()};seg.appendChild(b)});wrap.appendChild(seg);
+        if(q.ex){const e2=document.createElement('input');e2.placeholder=q.exPh;e2.style.marginTop='6px';e2.value=A[q.ex]||'';e2.oninput=ev=>{A[q.ex]=ev.target.value;capPersist()};wrap.appendChild(e2)}
+      }
+      if(q.type!=='lik'&&q.type!=='yn'&&q.type!=='num')q.out.forEach(k=>{const pb=document.createElement('div');pb.className='pillbox';pb.innerHTML=pill(D,k);it.appendChild(pb)});
+      c.appendChild(it)});
+    box.appendChild(c)});
+  box.querySelectorAll('[data-cyc]').forEach(b=>b.onclick=()=>{const k=b.dataset.cyc;const o=CQ[k].opts;const D2=capDerive(G.raw);const cv=D2.R[k];const i=o.indexOf(cv);G.raw.ovr[k]=o[(i+1)%o.length];capPersist();capRender()});
+  box.querySelectorAll('[data-auto]').forEach(b=>b.onclick=()=>{delete G.raw.ovr[b.dataset.auto];capPersist();capRender()});
+  const S=capScores({resp:D.R}),nm=capMissing().length,tot=CAP_ORDER.filter(k=>!CQ[k].opt).length,nrev=Object.values(D.st).filter(x=>x==='revisar').length;
+  $('#capRes').innerHTML='<div class="kpi"><div><b>'+(tot-nm)+'/'+tot+'</b><span class="muted">ítems de la clave listos'+(nrev?' · '+nrev+' por revisar':'')+'</span></div><div><b>'+(S.con==null?'—':S.con+'/9')+'</b><span class="muted">conocimientos correctos</span></div><div><b>'+(S.suma==null?'—':S.suma)+'</b><span class="muted">puntaje de actitudes (8–24)</span></div><div><b>'+(S.actitud||'—')+'</b><span class="muted">actitud (corte 18,7)</span></div></div>'
+    +'<details style="margin-top:8px"><summary>Ver la evaluación según la clave</summary><table class="t">'+CAP_ORDER.filter(k=>k!=='p16.1').map(k=>'<tr><td>'+esc(CQ[k].t)+'</td><td>'+esc(D.R[k]==null?(D.st[k]==='revisar'?'Revisar':'—'):D.R[k])+'</td></tr>').join('')+'</table></details>';
 }
 $('#cNom').oninput=e=>{G.nombre=e.target.value;capPersist()};
 $('#cNom').onchange=()=>capPrefill();
 $('#cEdad').oninput=e=>{G.edad=e.target.value;capPersist()};
 $('#cSexo').onchange=e=>{G.sexo=e.target.value;capPersist()};
-$('#cGrado').onchange=e=>{G.grado=e.target.value;capPersist()};
+$('#cGrado').onchange=e=>{G.grado=e.target.value;if(/^comunidad/i.test(G.grado)&&G.colegio==='I.E. Dos de Mayo'){G.colegio='';$('#cCol').value=''}capPersist()};
 $('#cCol').oninput=e=>{G.colegio=e.target.value;capPersist()};
 $('#cToma').onchange=e=>{G.toma=e.target.value;capPersist()};
 $('#cFecha').onchange=e=>{G.fecha=e.target.value;capPersist()};
@@ -945,7 +1066,7 @@ $('#capSave').onclick=()=>{
   if(!G.id&&capConfirm!==key+'dup'){const dup=allCapso().find(r=>norm(r.nombre)===norm(G.nombre)&&r.toma===G.toma);
     if(dup){capConfirm=key+'dup';m.textContent='Ya hay un '+G.toma+' de '+dup.nombre+' ('+dup.fecha+'). Toca «Guardar» otra vez si es otra persona.';m.classList.remove('hide');return}}
   const now=Date.now(),id=G.id||('c'+now.toString(36)+Math.random().toString(36).slice(2,7));
-  const rec={_t:'capso',id,nombre:G.nombre.trim(),edad:+G.edad,sexo:G.sexo,grado:G.grado,colegio:G.colegio||'',toma:G.toma,fecha:G.fecha,resp:G.resp,creado:G.creado||now,actualizado:now};
+  const rec={_t:'capso',id,nombre:G.nombre.trim(),edad:+G.edad,sexo:G.sexo,grado:G.grado,colegio:G.colegio||'',toma:G.toma,fecha:G.fecha,raw:G.raw,resp:capDerive(G.raw).R,creado:G.creado||now,actualizado:now};
   pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
   const nm=rec.nombre;G=capNew();G.grado=rec.grado;G.colegio=rec.colegio;G.toma=rec.toma;G.fecha=rec.fecha;capMissShow=false;capConfirm=null;capPersist();capFill();
   m.className='msg ok';m.textContent='CAPSO guardado: '+nm+'. Listo para la siguiente persona (se mantienen grado, colegio, toma y fecha).';m.classList.remove('hide');
@@ -963,7 +1084,7 @@ function renderCapList(){
   shown.forEach(r=>{const S=capScores(r);const el=document.createElement('div');el.className='it';
     el.innerHTML='<div><b>'+esc(r.nombre)+'</b>'+(pending[r.id]?'<span class="badge">sin subir</span>':'')+'<div class="muted">'+esc(r.edad)+' a · '+esc((r.sexo||'').charAt(0))+' · '+esc(r.grado||'—')+' · '+esc(r.toma)+' · '+esc(r.fecha)+'</div><div class="muted">Conocimientos '+(S.con==null?'—':S.con+'/9')+' · Actitud '+(S.suma==null?'—':S.suma+' ('+S.actitud+')')+'</div></div>';
     const bx=document.createElement('div');bx.className='row';
-    const be=document.createElement('button');be.className='btn sm';be.textContent='Editar';be.onclick=()=>{G=JSON.parse(JSON.stringify(r));delete G._t;capMissShow=false;capPersist();show('C');capFill();window.scrollTo(0,0)};
+    const be=document.createElement('button');be.className='btn sm';be.textContent='Editar';be.onclick=()=>{G=JSON.parse(JSON.stringify(r));delete G._t;if(!G.raw)G.raw={a:{},ovr:Object.assign({},r.resp||{}),cp:{},f1:[],f7:[],lik:{}};capMissShow=false;capPersist();show('C');capFill();window.scrollTo(0,0)};
     const bd=document.createElement('button');bd.className='btn sm danger';bd.textContent=cdelArm===r.id?'¿Eliminar? Toca otra vez':'Eliminar';
     bd.onclick=()=>{if(cdelArm!==r.id){cdelArm=r.id;renderList();setTimeout(()=>{if(cdelArm===r.id){cdelArm=null;renderList()}},4000);return}
       cdelArm=null;if(pending[r.id]){delete pending[r.id];LS.set(LSP+'pending',pending)}if(capRemote[r.id]){dels.push('capso:'+r.id);LS.set(LSP+'del',dels)}renderList();flush()};
