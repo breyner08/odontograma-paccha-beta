@@ -557,7 +557,7 @@ $('#bNuevo').onclick=()=>{F=newForm();cur=firstOf('P');persist();fillForm();$('#
 let db=null,dbState='connecting',remote=LS.get(LSP+'cache',{}),pending=LS.get(LSP+'pending',{}),dels=LS.get(LSP+'del',[]),flushing=false,readOnly=false,downloads=null;
 function allRecords(){const m=Object.assign({},remote);for(const [k,v] of Object.entries(pending))if(!v._t)m[k]=v;dels.forEach(id=>delete m[id]);return Object.values(m)}
 let capRemote=LS.get(LSP+'capcache',{});
-function allCapso(){const m=Object.assign({},capRemote);for(const [k,v] of Object.entries(pending))if(v._t==='capso')m[k]=v;dels.forEach(id=>{if(id.startsWith('capso:'))delete m[id.slice(6)]});return Object.values(m)}
+function allCapso(){const m=Object.assign({},capRemote);for(const [k,v] of Object.entries(pending))if(v._t==='capso')m[k]=v;dels.forEach(id=>{if(id.startsWith('capso:'))delete m[id.slice(6)]});return Object.values(m).map(r=>{if(!r.raw||typeof capDerive!=='function')return r;try{return Object.assign({},r,{resp:capDerive(JSON.parse(JSON.stringify(r.raw))).R})}catch(e){return r}})}
 let confirmDup=null;
 $('#bSave').onclick=()=>{
   const sm=$('#saveMsg');sm.className='msg';
@@ -858,9 +858,10 @@ window.__ficha={buildFicha,toPDF,toSVG,buildCapso:r=>buildCapso(r)};
 /* ---- PDF del CAPSO (formato del cuestionario UPCH) ---- */
 function wrapTxt(str,size,maxW,bold){const out=[];String(str||'').split('\n').forEach(par=>{const ws=par.split(/\s+/).filter(Boolean);let line='';ws.forEach(w=>{const t=line?line+' '+w:w;if(tw(t,size,bold)>maxW&&line){out.push(line);line=w}else line=t});out.push(line)});return out}
 function buildCapso(r){
-  const D=Doc();const raw=r.raw||{a:{},f1:[],f7:[]};const A=raw.a||{};const BL='#1f3fb0';
-  const der=r.raw?capDerive(r.raw):{R:r.resp||{},why:{},st:{}};const R=der.R;
+  const D=Doc();const raw=r.raw?JSON.parse(JSON.stringify(r.raw)):{a:{},f1:[],f7:[],ovr:{},legacy:Object.assign({},r.resp||{})};const A=raw.a||{};const BL='#1f3fb0';
+  const der=capDerive(raw);const R=der.R;
   const X0=108,X1=798,SZ=14;
+  const V=(q,k)=>{const t=A[q];if(t&&String(t).trim())return t;return der.st&&der.st[k]==='anterior'&&R[k]!=null?'(registrado como: '+R[k]+')':''};
   const dmy=s=>{if(!s)return'';const [y,m,d]=s.split('-');return d+'/'+m+'/'+y};
   let y;
   const newPage=()=>{D.page(905,1280);y=80};
@@ -884,30 +885,30 @@ function buildCapso(r){
   field(X0,403,'Encuestado(a):',r.nombre,476);field(482,403,'Apoderado*(a):',r.apod||'',X1);
   field(X0,430,'Edad:',r.edad?String(r.edad):'',210);field(216,430,'Sexo:',r.sexo||'',340);field(346,430,'Grado de Instrucción**:',!/^\d+º/.test(r.grado||'')?(r.instr||''):[r.grado,r.colegio].filter(Boolean).join(' – '),X1);
   y=470;D.text(X0,y,'I.',SZ,{b:1}).text(162,y,'SECCION CONOCIMIENTOS',SZ,{b:1});y-=8;
-  Q('1','Mencione 5 alimentos que causen daño a sus dientes y porque?',[(raw.f1||[]).join(', '),A.q1why?'porque '+A.q1why:''].filter(Boolean).join(' — '));
-  Q('2','¿Porque es importante cepillarse los dientes?',A.q2);
+  Q('1','Mencione 5 alimentos que causen daño a sus dientes y porque?',[(raw.f1||[]).join(', ')||V('q1x','p5'),A.q1why?'porque '+A.q1why:''].filter(Boolean).join(' — '));
+  Q('2','¿Porque es importante cepillarse los dientes?',V('q2','p6'));
   Q('2.1.','¿Qué elementos debe emplear para la limpieza de la boca?',A.q21,{sub:1});
-  Q('3','¿Qué partes de la boca tiene que limpiar diariamente?',A.q3);
-  Q('4','¿Cada cuánto tiempo se debe ir al dentista? (tiempo expresado en meses)',A.q4);
-  Q('5','¿A que edad se debería ir por primera vez al dentista?',A.q5);
+  Q('3','¿Qué partes de la boca tiene que limpiar diariamente?',V('q3','p7'));
+  Q('4','¿Cada cuánto tiempo se debe ir al dentista? (tiempo expresado en meses)',V('q4','p8'));
+  Q('5','¿A que edad se debería ir por primera vez al dentista?',V('q5','p9'));
   Q('6','Sabe usted ¿Que es el flúor?','',{noLine:1});yn(A.q6||R.p10,' (pase a la pregunta 7)');y+=30;D.text(135,y,'si la respuesta anterior es Si, responda:',SZ);y-=4;
   const noF=(A.q6||R.p10)==='No';
-  Q('6.1.','¿Qué acción tiene?',noF?'':A.q61,{sub:1});Q('6.2.','¿Qué alimentos tienen flúor?',noF?'':A.q62,{sub:1});Q('6.3.','¿En que otros productos se puede encontrar el flúor?',noF?'':A.q63,{sub:1});
+  Q('6.1.','¿Qué acción tiene?',noF?'':V('q61','p10.1'),{sub:1});Q('6.2.','¿Qué alimentos tienen flúor?',noF?'':V('q62','p10.2'),{sub:1});Q('6.3.','¿En que otros productos se puede encontrar el flúor?',noF?'':V('q63','p10.3'),{sub:1});
   y+=26;D.text(X0,y,'II.',SZ,{b:1}).text(162,y,'SECCION PRACTICAS',SZ,{b:1});y-=8;
-  Q('7','¿Qué alimentos consumió usted ayer? (anotar todo aquello que esté fuera de las tres comidas principales)',A.q7none?'Nada fuera de las tres comidas principales':(raw.f7||[]).join(', '),{lines:3});
+  Q('7','¿Qué alimentos consumió usted ayer? (anotar todo aquello que esté fuera de las tres comidas principales)',A.q7none?'Nada fuera de las tres comidas principales':((raw.f7||[]).join(', ')||V('q7x','p11')),{lines:3});
   /* página 2 */
   newPage();y=50;GAP=21;
   Q('8','De los alimentos que consumió ayer, ¿A alguno le agregó azúcar? ¿Cuáles? (incluye todos los alimentos del día)',A.q8);
-  Q('9','¿Qué emplea usted para la limpieza de su boca? (si no responde cepillo, pase a la pregunta 11)',A.q9);
+  Q('9','¿Qué emplea usted para la limpieza de su boca? (si no responde cepillo, pase a la pregunta 11)',V('q9','p12'));
   Q('10','¿Cuántas veces al día se cepilla los dientes?',A.q10!=null&&A.q10!==''?(A.q10==='1'?'1 vez':A.q10+' veces'):(R.p13!=null?R.p13+' veces':''));
   Q('10.1.','En relación a la pregunta anterior, ¿En que momentos del día se cepilla los dientes?',A.q101,{sub:1});
-  Q('11','¿Hace cuánto tiempo visitó al dentista en el último año?',A.q11);
+  Q('11','¿Hace cuánto tiempo visitó al dentista en el último año?',V('q11','p14'));
   Q('11.1.','¿En que lugar lo atendieron?',A.q111,{sub:1});Q('11.2.','¿Cuál fue el motivo de su visita?',A.q112,{sub:1});
-  Q('12','¿Qué es lo que hace cuando tiene dolor de muela?',A.q12);
-  Q('13','¿Qué remedio o producto casero emplea o usa cuando tiene un dolor de muela?',A.q13);
+  Q('12','¿Qué es lo que hace cuando tiene dolor de muela?',V('q12','p15'));
+  Q('13','¿Qué remedio o producto casero emplea o usa cuando tiene un dolor de muela?',V('q13','p16'));
   Q('14','Por favor, ¿Podría mostrarme su paquete de sal? (Anotar la marca y la concentración de flúor que aparece en el paquete). Si contiene flúor, ¿como lo almacena?',[A.q14,raw.salFl===true?'contiene flúor':raw.salFl===false?'sin flúor':''].filter(Boolean).join(' — '));
   Q('15','¿Usa usted pasta dental?','',{noLine:1});yn(A.q15);Q('15.1.','¿Por qué?',A.q151,{sub:1});
-  Q('16','¿En qué se basa para elegir la marca de pasta dental que compra?',A.q16);
+  Q('16','¿En qué se basa para elegir la marca de pasta dental que compra?',V('q16','p18'));
   y+=30;D.text(X0,y,'III SECCION ACTITUDES',SZ,{b:1}).text(X0+tw('III SECCION ACTITUDES ',SZ,1),y,'(Marcar con una X el casillero correspondiente)',SZ);
   const tx0=X0,c1=560,cw=80,top=y+10,hh=58,rh=31;
   D.rect(tx0,top,X1-tx0,hh+rh*8,1);[c1,c1+cw,c1+2*cw].forEach(x=>D.line(x,top,x,top+hh+rh*8,1));D.line(tx0+34,top+hh,tx0+34,top+hh+rh*8,1);
@@ -1001,7 +1002,7 @@ function parseMonths(s){const t=NZ(s);if(!t.trim())return null;
   if(!m)return null;let n=W[m[1]]!=null?W[m[1]]:parseFloat(m[1].replace(',','.'));const u=m[2]||'';
   if(u.startsWith('ano'))n*=12;else if(u.startsWith('semana'))n=n/4.3;else if(u.startsWith('dia'))n=n/30;return Math.round(n*10)/10}
 const COMP={
-  p6:{all:true,parts:[['evitar caries',['caries','picad','careado','cariado','agujer','huec','pudr','=dano','danen','danar','malogr','destru','=sanos','dientes sanos']],['evitar enfermedad de encías / limpieza o higiene',['encia','gingiv','sangr','periodont','limpi','higien','sarro','placa','mal aliento','bacteria','microb','infecc','=aseo','=asear']]],yes:'Sabe',no:'No sabe'},
+  p6:{all:true,parts:[['evitar caries',['caries','picad','=pique','=piquen','=picar','=pica','=pican','=cariar','=carien','careado','cariado','agujer','huec','pudr','=dano','danen','danar','malogr','destru','=sanos','dientes sanos']],['evitar enfermedad de encías / limpieza o higiene',['encia','gingiv','sangr','periodont','limpi','higien','sarro','placa','mal aliento','bacteria','microb','infecc','=aseo','=asear']]],yes:'Sabe',no:'No sabe'},
   p7:{all:true,parts:[['dientes',['diente','muela','dentadura']],['lengua',['lengua']],['encía',['encia']]],yes:'Sabe',no:'No sabe'},
   'p10.1':{all:false,parts:[['fortalecer / proteger / prevenir caries',['fortalec','proteg','previen','prevenir','evita','contra la caries','endurec','fuerte','resistente','refuerz']]],yes:'Sabe',no:'No sabe'},
   'p10.2':{all:false,parts:[['pescado',['pescado','=pez','pecado','atun','sardina','jurel','bonito']],['té negro o verde',['=te','=tes','te verde','te negro']],['garbanzos',['garbanz']]],yes:'Sabe',no:'No sabe'},
@@ -1011,9 +1012,11 @@ const COMP={
   p18:{all:false,parts:[['porque contiene flúor',['fluor','fluo']]],yes:'Sí',no:'No'}
 };
 function compEval(key,text,ovp){const c=COMP[key];const t=NZ(text);const det=c.parts.map(([lab,kw],i)=>{const o=ovp&&ovp[i];return o!=null?o:hasAny(t,kw)});const ok=c.all?det.every(Boolean):det.some(Boolean);return{det,v:ok?c.yes:c.no}}
+function capNormRaw(raw){if(raw&&!raw.legacy&&raw.ovr&&Object.keys(raw.ovr).length>=20){raw.legacy=raw.ovr;raw.ovr={}}return raw}
 function capDerive(raw){
-  const A=raw.a||{},O=raw.ovr||{},R={},why={},st={};
-  const set=(k,v,w,s)=>{if(O[k]!=null){R[k]=O[k];st[k]='manual';why[k]=w||''}else{R[k]=v;st[k]=v==null?(s||'falta'):(s||'auto');why[k]=w||''}};
+  capNormRaw(raw);
+  const A=raw.a||{},O=raw.ovr||{},L=raw.legacy||{},R={},why={},st={};
+  const set=(k,v,w,s)=>{if(O[k]!=null){R[k]=O[k];st[k]='manual';why[k]=w||''}else if(v==null&&L[k]!=null&&s!=='revisar'){R[k]=L[k];st[k]='anterior';why[k]='registrado en la versión anterior (sin respuesta escrita)'}else{R[k]=v;st[k]=v==null?(s||'falta'):(s||'auto');why[k]=w||''}};
   // P1 alimentos que dañan
   {const it=(raw.f1||[]);if(!it.length)set('p5',null,'');else{const cl=it.map(x=>({x,...foodClass(x)}));const non=cl.filter(c=>c.c===false),unk=cl.filter(c=>c.c==null);
     if(non.length)set('p5','No sabe','No cariogénico: '+non.map(c=>c.x).join(', '));else if(unk.length)set('p5',null,'Clasifica: '+unk.map(c=>c.x).join(', '),'revisar');else set('p5','Sabe','Todos cariogénicos ('+it.length+')')}}
@@ -1097,7 +1100,7 @@ const OPTS=k=>CQ[k].kind==='num'?CQ[k].opts:CQ[k].opts;
 function pill(D,k){const v=D.R[k],s=D.st[k];const good=(k==='p11'||k==='p16')?v===CQ[k].opts[1]:v===CQ[k].opts[0];const col=s==='revisar'?'var(--warn)':v==null?'var(--tx2)':(CQ[k].kind==='num'?'var(--tx)':good?'var(--ok)':'var(--err)');
   const lab=CQ[k].t.replace(/^P[\d.]+\.\s*/,'').slice(0,40);
   return '<div class="row" style="gap:6px;margin-top:6px;font-size:13px"><span style="font-weight:700;color:'+col+'">→ '+(v==null?(s==='revisar'?'Revisar':'Sin respuesta'):esc(v))+'</span>'+(CQ[k].kind==='num'||!['p13.1','p13.2'].includes(k)?'':'<span class="muted">('+esc(k==='p13.1'?'después de cada comida':'antes de dormir')+')</span>')
-   +(s==='manual'?'<span class="badge">manual</span>':s==='auto'?'<span class="muted">(clave)</span>':'')
+   +(s==='manual'?'<span class="badge">manual</span>':s==='anterior'?'<span class="badge">registro anterior</span>':s==='auto'?'<span class="muted">(clave)</span>':'')
    +(D.why[k]?'<span class="muted" style="flex-basis:100%">'+esc(D.why[k])+'</span>':'')
    +'<button class="btn sm" data-cyc="'+k+'">Cambiar</button>'+(s==='manual'?'<button class="btn sm" data-auto="'+k+'">Usar la clave</button>':'')+'</div>'}
 function capRender(){
@@ -1129,7 +1132,7 @@ function capRender(){
         if(q.n==='10.1'&&(A.q101||'').trim()){const cc=document.createElement('div');cc.className='segw';cc.style.marginTop='6px';[['p131','después de cada comida','p13.1'],['p132','antes de dormir','p13.2']].forEach(([ck,lab,k])=>{const on=D.R[k]==='Sí';const b=document.createElement('button');b.style.flex='0 0 auto';b.style.fontSize='12.5px';b.className=on?'on':'';b.textContent=(on?'✓ ':'✗ ')+lab;b.onclick=()=>{G.raw.cp[ck]=!on;capPersist();capRender()};cc.appendChild(b)});wrap.appendChild(cc)}
       }else if(q.type==='yn'||q.type==='num'||q.type==='lik'){
         const seg=document.createElement('div');seg.className='segw';const opts=q.type==='yn'?['Sí','No']:q.type==='num'?['0','1','2','3','4 o más']:C_LIK;
-        const curv=q.type==='lik'?(G.raw.lik||{})[q.k]:A[q.a];
+        const LG=G.raw.legacy||{};const curv=q.type==='lik'?((G.raw.lik||{})[q.k]||LG[q.k]):(A[q.a]||(q.a==='q6'?LG.p10:q.a==='q10'?LG.p13:null));
         opts.forEach(o=>{const b=document.createElement('button');b.textContent=o;if(curv===o)b.className='on';b.onclick=()=>{if(q.type==='lik'){G.raw.lik=G.raw.lik||{};G.raw.lik[q.k]=curv===o?null:o}else A[q.a]=curv===o?null:o;capPersist();capRender()};seg.appendChild(b)});wrap.appendChild(seg);
         if(q.ex){const e2=document.createElement('input');e2.placeholder=q.exPh;e2.style.marginTop='6px';e2.value=A[q.ex]||'';e2.oninput=ev=>{A[q.ex]=ev.target.value;capPersist()};wrap.appendChild(e2)}
       }
@@ -1186,7 +1189,7 @@ function renderCapList(){
   shown.forEach(r=>{const S=capScores(r);const el=document.createElement('div');el.className='it';
     el.innerHTML='<div><b>'+esc(r.nombre)+'</b>'+(pending[r.id]?'<span class="badge">sin subir</span>':'')+'<div class="muted">'+esc(r.edad)+' a · '+esc((r.sexo||'').charAt(0))+' · '+esc(r.grado||'—')+' · '+esc(r.toma)+' · '+esc(toDMY(r.fecha))+'</div><div class="muted">Conocimientos '+(S.con==null?'—':S.con+'/9')+' · Actitud '+(S.suma==null?'—':S.suma+' ('+S.actitud+')')+'</div></div>';
     const bx=document.createElement('div');bx.className='row';
-    const be=document.createElement('button');be.className='btn sm';be.textContent='Editar';be.onclick=()=>{G=JSON.parse(JSON.stringify(r));delete G._t;if(!G.raw)G.raw={a:{},ovr:Object.assign({},r.resp||{}),cp:{},f1:[],f7:[],lik:{}};capMissShow=false;capPersist();show('C');capFill();window.scrollTo(0,0)};
+    const be=document.createElement('button');be.className='btn sm';be.textContent='Editar';be.onclick=()=>{G=JSON.parse(JSON.stringify(r));delete G._t;if(!G.raw)G.raw={a:{},ovr:{},legacy:Object.assign({},r.resp||{}),cp:{},f1:[],f7:[],lik:{}};capNormRaw(G.raw);capMissShow=false;capPersist();show('C');capFill();window.scrollTo(0,0)};
     const bd=document.createElement('button');bd.className='btn sm danger';bd.textContent=cdelArm===r.id?'¿Eliminar? Toca otra vez':'Eliminar';
     bd.onclick=()=>{if(cdelArm!==r.id){cdelArm=r.id;renderList();setTimeout(()=>{if(cdelArm===r.id){cdelArm=null;renderList()}},4000);return}
       cdelArm=null;if(pending[r.id]){delete pending[r.id];LS.set(LSP+'pending',pending)}if(capRemote[r.id]){dels.push('capso:'+r.id);LS.set(LSP+'del',dels)}renderList();flush()};
