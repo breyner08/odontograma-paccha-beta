@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CPOD BETA">
+<meta name="theme-color" content="#0d7a6f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Odontograma CPOD/ceod · Paccha 2026</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#1c1e21;--tx2:#5c6370;--bd:#dde0e5;--bd2:#b9bec7;--ac:#0d7a6f;--acs:#e3f3f1;--warn:#a35200;--warnbg:#fff4e5;--err:#c4262e;--ok:#1f7a3d;
+--c0:#ffffff;--c1:#e5484d;--c2:#f76b15;--c3:#3e63dd;--c6:#30a46c;--gray:#8b919a}
+@media (prefers-color-scheme:dark){:root{--bg:#141618;--card:#1e2124;--tx:#eceef0;--tx2:#a0a7b1;--bd:#33373c;--bd2:#4a5058;--ac:#3cc2b2;--acs:#16302d;--warn:#f0a35c;--warnbg:#33260f;--c0:#f4f5f7}}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);-webkit-text-size-adjust:100%}
+header{position:sticky;top:0;z-index:5;padding-top:max(10px,env(safe-area-inset-top))!important;background:var(--card);border-bottom:1px solid var(--bd);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+header h1{font-size:16px;margin:0;flex:1;min-width:180px}
+.pill{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--acs);color:var(--ac);white-space:nowrap}
+.pill.warn{background:var(--warnbg);color:var(--warn)}
+.tabs{display:flex;gap:4px}
+.tabs button{border:1px solid var(--bd);background:none;color:var(--tx);padding:7px 12px;border-radius:8px;font-size:14px}
+.tabs button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+main{max-width:1000px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{font-size:15px;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--tx2)}
+input,select,textarea{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd2);border-radius:8px;padding:8px 10px;min-height:40px;width:100%}
+textarea{min-height:60px;resize:vertical}
+button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btn{border:1px solid var(--bd2);background:var(--card);color:var(--tx);border-radius:8px;padding:9px 14px;min-height:42px}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
+.btn.danger{color:var(--err);border-color:var(--err)}
+.btn.sm{padding:5px 10px;min-height:34px;font-size:13px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--tx2);font-size:13px}
+.msg{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--warnbg);color:var(--warn);margin-top:8px}
+.msg.ok{background:var(--acs);color:var(--ac)}
+.hide{display:none!important}
+/* paleta */
+.pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-bottom:8px}
+.cd{display:flex;align-items:center;gap:8px;text-align:left;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:5px 8px;min-height:40px;font-size:12.5px}
+.cd.on{outline:2.5px solid var(--ac);border-color:var(--ac)}
+.nb{flex:none;width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:1px solid var(--bd2);color:#1c1e21}
+.plab{font-size:12px;color:var(--tx2);margin:4px 0}
+/* odontograma */
+.odo{display:flex;flex-direction:column;gap:2px;margin:6px 0}
+.orow{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:2px}
+.tc{text-align:center;font-size:11px;color:var(--tx2);border-radius:6px;padding:1px 0;user-select:none;-webkit-user-select:none}
+.tc.mid{box-shadow:inset 2px 0 0 var(--bd2)}
+.tc.cur{background:var(--acs)}
+.tc .cl{font-weight:700;color:var(--tx);min-height:15px;font-size:11px}
+.tc svg{display:block;width:100%;max-width:40px;margin:0 auto;touch-action:manipulation}
+.sep{height:6px}
+.olbl{display:flex;justify-content:space-between;font-size:11px;color:var(--tx2)}
+/* zoom */
+.zoom{display:grid;grid-template-columns:minmax(150px,200px) 1fr;gap:14px;align-items:center;border-top:1px solid var(--bd);padding-top:12px;margin-top:8px}
+@media (max-width:520px){.zoom{grid-template-columns:1fr}.zoom .zsvg{max-width:190px;margin:0 auto}}
+.zsvg svg{width:100%;display:block}
+.zt{font-weight:600;font-size:15px}
+/* tablas */
+details{border:1px solid var(--bd);border-radius:10px;margin-top:8px}
+summary{padding:10px 12px;cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;justify-content:space-between;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"▾";color:var(--tx2)}
+details[open] summary::after{content:"▴"}
+summary span.k{font-weight:500;color:var(--ac)}
+table.t{width:100%;border-collapse:collapse;font-size:13.5px}
+table.t td{padding:6px 12px;border-top:1px solid var(--bd)}
+table.t td:last-child{text-align:right;font-weight:600}
+/* IHO */
+.estr{display:grid;grid-template-columns:90px 120px 1fr;gap:8px;align-items:center;padding:4px 0}@media (max-width:520px){.estr{grid-template-columns:80px 110px 1fr}}
+.ihor{display:grid;grid-template-columns:70px 1fr;gap:8px;align-items:center;padding:4px 0}
+.seg{display:flex;gap:4px}
+.seg button{flex:1;min-height:38px;border:1px solid var(--bd2);border-radius:8px;background:var(--card);color:var(--tx)}
+.seg button.on{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:700}
+/* lista */
+.it{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--bd);align-items:center;flex-wrap:wrap}
+.it b{font-size:14.5px}
+.badge{font-size:11px;padding:2px 7px;border-radius:99px;background:var(--warnbg);color:var(--warn);margin-left:6px}
+.stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px}
+.stat div{background:var(--bg);border-radius:8px;padding:8px 10px}
+.stat b{display:block;font-size:18px}
+.pvp{width:100%;max-width:1100px;box-shadow:0 2px 10px rgba(0,0,0,.4)}.pvp:last-child{max-width:780px}
+.segw{display:flex;flex-wrap:wrap;gap:4px}.segw button{flex:1 1 auto;min-height:38px;border:1px solid var(--bd2);border-radius:8px;background:var(--card);color:var(--tx);padding:4px 10px;font-size:13.5px}.segw button.on{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}.segw button:disabled{opacity:.45}
+.capi{padding:10px 0;border-top:1px solid var(--bd)}.capi:first-of-type{border-top:0}.capi .qt{font-weight:600;font-size:14px;margin-bottom:2px}.capi .qh{font-size:12px;color:var(--tx2);margin-bottom:6px}.capi.miss .qt{color:var(--warn)}
+.rt{width:100%;border-collapse:collapse;font-size:13px}.rt th,.rt td{padding:5px 6px;border:1px solid var(--bd);text-align:center}.rt th{background:var(--bg);font-weight:600}.rt td:first-child,.rt th:first-child{text-align:left}.rt tr.tot td{font-weight:700;background:var(--acs)}.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}.kpisvg{max-height:230px}#resBody svg{max-height:230px}.rh{font-size:14px;font-weight:700;margin:14px 0 6px}.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.kpi div{background:var(--bg);border-radius:8px;padding:8px 10px}.kpi b{display:block;font-size:19px}
+.savebar{position:sticky;bottom:0;padding-bottom:max(10px,env(safe-area-inset-bottom))!important;background:var(--card);border-top:1px solid var(--bd);padding:10px 12px;display:flex;gap:8px;justify-content:flex-end;z-index:4;margin:0 -12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Odontograma CPOD/ceod · Paccha 2026 <span style="font-size:11px;font-weight:500;color:var(--tx2);border:1px solid var(--bd2);border-radius:99px;padding:1px 7px;vertical-align:middle"><span id="verLbl">v2.0</span></span></h1>
+  <span id="pill" class="pill warn">Conectando…</span>
+  <div class="tabs"><button id="tabN" class="on">Odontograma</button><button id="tabC">CAPSO</button><button id="tabL">Registros (<span id="nreg">0</span>)</button><button id="tabR">Resumen</button></div>
+</header>
+
+<main>
+<section id="vNew">
+  <div class="card">
+    <h2 id="ftitle">Datos del paciente</h2>
+    <div class="grid">
+      <label class="f" style="grid-column:1/-1">Nombre y apellidos<input id="fNom" list="names" autocomplete="off" placeholder="Escribe el nombre"></label>
+      <datalist id="names"></datalist>
+      <label class="f">Fecha de nacimiento<input id="fNac" type="date"></label>
+      <label class="f">Edad (años cumplidos)<input id="fEdad" type="number" inputmode="numeric" min="1" max="110"><span id="edadHint" style="font-size:11px"></span></label>
+      <label class="f">Sexo<select id="fSexo"><option value="">—</option><option>Femenino</option><option>Masculino</option></select></label>
+      <label class="f">Grado y sección<select id="fGrado"></select></label>
+      <label class="f">Tipo de evaluación<select id="fTipo"><option>Diagnóstico</option><option>Control 1 (solo IHO)</option><option>Control 2 (solo IHO)</option></select></label>
+      <label class="f">Fecha de examen<input id="fFecha" type="date"></label>
+      <label class="f">DNI (opcional)<input id="fDni" inputmode="numeric" maxlength="8" autocomplete="off"></label>
+      <label class="f">SIS (opcional)<input id="fSis" autocomplete="off"></label>
+      <label class="f" style="grid-column:1/-1">Dirección<input id="fDir" autocomplete="off"></label>
+      <label class="f">Colegio<input id="fCol" autocomplete="off"></label>
+      <label class="f">Dentición<select id="fDent"><option value="P">Permanente</option><option value="M">Mixta</option><option value="D">Decidua</option></select></label>
+    </div>
+    <div id="prefMsg" class="msg ok hide"></div>
+  </div>
+  <div class="card" id="cEst">
+    <h2>Examen estomatológico <span class="muted" style="font-weight:400">(regístrese únicamente lo anormal)</span></h2>
+    <div id="est"></div>
+  </div>
+
+  <div class="card" id="cOdo">
+    <h2>Odontograma</h2>
+    <div class="plab">Por superficie: elige el código y toca la cara (otro toque la devuelve a sana). El 0 sobre una pieza ausente o con código 4–11 la deja sana</div>
+    <div class="pal" id="palS"></div>
+    <div class="plab">Pieza completa: elige el código y toca el diente (otro toque lo quita)</div>
+    <div class="pal" id="palT"></div>
+    <div class="olbl"><span>Derecha</span><span>Registro: 18 → 28, luego 38 → 48</span><span>Izquierda</span></div>
+    <div class="odo" id="odo"></div>
+    <div class="muted" id="tapHint"></div>
+    <div class="zoom">
+      <div class="zsvg" id="zsvg"></div>
+      <div>
+        <div class="zt" id="zt"></div>
+        <div class="muted" id="zs" style="margin:4px 0 10px"></div>
+        <div class="row">
+          <button class="btn sm" id="bPrev">◀ Anterior</button>
+          <button class="btn sm pri" id="bSano">Sana y siguiente ▶</button>
+          <button class="btn sm" id="bNext">Siguiente ▶</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn sm hide" id="bSwap"></button>
+          <button class="btn sm" id="bClr">Borrar pieza</button>
+        </div>
+      </div>
+    </div>
+    <div id="alerta" class="msg hide"></div><div id="dMsg" class="msg hide"></div>
+    <div id="stats"></div>
+  </div>
+  <div class="card hide" id="cCtrl"><span class="muted">En los controles solo se registra el IHO; el odontograma queda en el registro de diagnóstico.</span></div>
+
+  <div class="card">
+    <h2>IHO-S (0–3 por sextante)</h2>
+    <div id="iho"></div>
+    <div class="muted" id="ihoRes" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card">
+    <label class="f">Observación<textarea id="fObs"></textarea></label>
+  </div>
+  <div id="saveMsg" class="msg hide"></div>
+  <div class="savebar">
+    <button class="btn" id="bNuevo">Limpiar</button>
+    <button class="btn pri" id="bSave">Guardar registro</button>
+  </div>
+</section>
+
+<section id="vList" class="hide">
+  <div class="card">
+    <div class="seg" id="lsw" style="max-width:360px;margin-bottom:10px"><button data-v="o" class="on">Odontograma (<span id="nO">0</span>)</button><button data-v="c">CAPSO (<span id="nC">0</span>)</button></div>
+    <div class="stat" id="sum"></div>
+    <div class="row">
+      <input id="q" placeholder="Buscar por nombre o grado" style="flex:1;min-width:180px">
+      <button class="btn" id="bXlsx">Descargar Excel</button>
+      <button class="btn" id="bCopy">Copiar tabla</button>
+      <button class="btn" id="bBackup">Respaldo (iCloud)</button>
+      <button class="btn" id="bOut">Cerrar sesión</button>
+    </div>
+    <div id="lMsg" class="msg hide"></div>
+    <div id="list" style="margin-top:6px"></div>
+    <div id="clist" class="hide" style="margin-top:6px"></div>
+  </div>
+</section>
+<section id="vCap" class="hide">
+  <div class="card">
+    <h2 id="capTitle">CAPSO · datos de la persona</h2>
+    <div class="grid">
+      <label class="f" style="grid-column:1/-1">Nombre y apellidos<input id="cNom" list="names2" autocomplete="off" placeholder="Escribe el nombre"></label>
+      <datalist id="names2"></datalist>
+      <label class="f">Edad (años)<input id="cEdad" type="number" inputmode="numeric" min="1" max="110"></label>
+      <label class="f">Sexo<select id="cSexo"><option value="">—</option><option>Femenino</option><option>Masculino</option></select></label>
+      <label class="f">Grado y sección<select id="cGrado"></select></label>
+      <label class="f">Colegio / grupo<input id="cCol" autocomplete="off"></label>
+      <label class="f">Toma del CAPSO<select id="cToma"></select></label>
+      <label class="f">Fecha<input id="cFecha" type="date"></label>
+    </div>
+    <div id="capPref" class="msg ok hide"></div>
+  </div>
+  <div id="capQ"></div>
+  <div class="card" id="capRes"></div>
+  <div id="capMsg" class="msg hide"></div>
+  <div class="savebar"><button class="btn" id="capNew">Limpiar</button><button class="btn pri" id="capSave">Guardar CAPSO</button></div>
+</section>
+<section id="vRes" class="hide">
+  <div class="card">
+    <div class="row">
+      <label class="f" style="flex:1;min-width:160px">Colegio / grupo<select id="rCol"></select></label>
+      <label class="f" style="flex:1;min-width:160px">Indicador de higiene<select id="rIho"><option value="ipb">IPB (placa blanda)</option><option value="iho">IHO-S (IPB + IPC)</option></select></label>
+      <button class="btn" id="rXlsx" style="align-self:flex-end">Descargar Excel</button>
+    </div>
+    <div class="muted" style="margin-top:6px">Se calcula con los registros guardados. Prom. = promedio; D.E. = desviación estándar. En las comparaciones pareadas solo entran las personas que tienen ambas tomas (se emparejan por nombre).</div>
+    <div id="rMsg" class="msg hide"></div>
+  </div>
+  <div id="resBody"></div>
+</section>
+</main>
+<div id="login" class="hide" style="position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px">
+  <div class="card" style="max-width:380px;width:100%">
+    <h2 style="font-size:17px">Odontograma CPOD/ceod · Paccha</h2>
+    <p class="muted" id="loginTxt">Inicia sesión una vez en este equipo. Después la app funciona aunque no haya señal.</p>
+    <label class="f">Correo<input id="lgEmail" type="email" autocomplete="username" inputmode="email"></label>
+    <label class="f" style="margin-top:8px">Contraseña<input id="lgPass" type="password" autocomplete="current-password"></label>
+    <div id="lgMsg" class="msg hide"></div>
+    <div class="row" style="margin-top:12px"><button class="btn pri" id="lgIn">Entrar</button><button class="btn" id="lgNew">Crear cuenta</button></div>
+  </div>
+</div>
+<div id="upd" class="hide" style="position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:25;background:var(--ac);color:#fff;border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between;box-shadow:0 4px 14px rgba(0,0,0,.25)">
+  <span>Hay una nueva versión de la app.</span><button class="btn sm" id="updBtn" style="background:#fff;color:var(--ac);border-color:#fff">Actualizar</button>
+</div>
+<div id="pv" class="hide" style="position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.6);display:flex;flex-direction:column">
+  <div style="background:var(--card);padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--bd)">
+    <b id="pvTitle" style="flex:1;min-width:160px"></b>
+    <button class="btn pri" id="pvDl">Descargar PDF</button><button class="btn" id="pvClose">Cerrar</button>
+  </div>
+  <div id="pvMsg" class="msg hide" style="margin:8px 12px 0"></div>
+  <div id="pvPages" style="flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:12px;align-items:center;-webkit-overflow-scrolling:touch"></div>
+</div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,setPersistence,indexedDBLocalPersistence} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,setDoc,deleteDoc,onSnapshot} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {FIREBASE_CONFIG,ALLOWED_EMAIL,ENV as ENV0} from "./config.js";
+const ENV=Object.assign({suffix:"",ls:"cpod_",appName:"",label:"",version:"2.0"},ENV0||{});
+const LSP=ENV.ls,COL_R="registros"+ENV.suffix,COL_C="capso"+ENV.suffix;
+(function(){
+const $=s=>document.querySelector(s);
+const SURF={'0':['Sana','var(--c0)'],'1':['Caries evidente','var(--c1)'],'2':['Obturada con caries','var(--c2)'],'3':['Obturación o corona en buen estado','var(--c3)'],'6':['Sellante en buen estado','var(--c6)']};
+const TOOTH={'4':'Perdida por caries','5':'Perdida por otras razones','7':'Pilar de puente (cuenta como O)','8':'Permanente no erupcionada','9':'No registrable','10':'Traumatismo (no cariosa)','11':'Hipoplasia (no cariosa)'};
+const PNAME=['','incisivo central','incisivo lateral','canino','primer premolar','segundo premolar','primer molar','segundo molar','tercer molar'];
+const DNAME=['','incisivo central','incisivo lateral','canino','primer molar','segundo molar'];
+const QNAME=['','superior derecho','superior izquierdo','inferior izquierdo','inferior derecho'];
+const R8=a=>a;
+const PU=[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28],DU=[55,54,53,52,51,61,62,63,64,65],DL=[85,84,83,82,81,71,72,73,74,75],PL=[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+const O_PU=PU,O_DU=DU,O_DL=[75,74,73,72,71,81,82,83,84,85],O_PL=[38,37,36,35,34,33,32,31,41,42,43,44,45,46,47,48];
+const ALLN=[...PU,...DU,...DL,...PL];
+const isDec=n=>n>=50,QD=n=>{const q=Math.floor(n/10);return q>4?q-4:q},PP=n=>n%10;
+const ORDERS={P:[...O_PU,...O_PL],D:[...O_DU,...O_DL],M:[...O_PU,...O_DU,...O_DL,...O_PL]};
+const ROWS={P:[[PU,true],[PL,false]],D:[[DU,true],[DL,false]],M:[[PU,true],[DU,true],[DL,false],[PL,false]]};
+const SEXT=[[16,55,17,54,18],[11,51,21,61,12,52,22,62],[26,65,27,64,28],[36,75,37,74,38],[31,71,41,81,32,72,42,82],[46,85,47,84,48]];
+const GRADOS=[];for(let g=1;g<=5;g++)for(const s of'ABCD')GRADOS.push(g+'º '+s);GRADOS.push('Comunidad / domicilio');
+const post=p=>p>=4;
+const faces=p=>post(p)?['V','L','M','D','O']:['V','L','M','D'];
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const norm=s=>(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>n==null||isNaN(n)?'—':(Math.round(n*100)/100).toString().replace('.',',');
+const ABS=t=>t.m==='8'||t.m==='x';
+const S0=()=>({V:'0',L:'0',M:'0',D:'0',O:'0'});
+
+/* ---------- estado ---------- */
+let F; // formulario en edición
+function blankPos(mode,age){
+  const pos={};const a=(age===''||age==null)?null:+age;
+  for(const n of ALLN){
+    const p=PP(n);let m=null;
+    if(isDec(n)){
+      if(mode==='M')m=(p>=3)?null:'x';
+    }else{
+      if(mode==='P'){if(p===8&&(a==null||a<18))m='8'}
+      else if(mode==='M'){const pres=(p<=2)||p===6||(p===7&&a!=null&&a>=12);m=pres?null:'8'}
+    }
+    pos[n]={m,f:null,s:S0()};
+  }
+  return pos;
+}
+function fixPos(rec){ // convierte registros del formato anterior
+  if(!rec||!rec.pos||rec.pos['16']||rec.pos[16])return rec;
+  const old=rec.pos,np=blankPos(rec.dent,rec.edad);
+  for(const n of ALLN){if(rec.dent==='M'){np[n].m=isDec(n)?'x':'8'}}
+  for(const k of Object.keys(old)){const [q,p]=k.split('-').map(Number);const t=old[k];const n=t.dec?(q+4)*10+p:q*10+p;if(np[n])np[n]={m:t.m,f:t.f,s:t.s}}
+  rec.pos=np;return rec;
+}
+const EST=['ATM','Ganglios','Queilitis','Lengua','Aftas','Otros'];
+const estBlank=()=>{const o={};EST.forEach(k=>o[k]={v:'NO',d:''});return o};
+function newForm(){return{id:null,nombre:'',nac:'',dni:'',sis:'',dir:'',colegio:'I.E. Dos de Mayo',est:estBlank(),edad:'',sexo:'',grado:'',tipo:'Diagnóstico',fecha:today(),dent:'P',pos:blankPos('P',''),touched:false,iho:[null,null,null,null,null,null],ipc:[null,null,null,null,null,null],obs:'',creado:null}}
+F=fixPos(LS.get(LSP+'draft',null))||newForm();
+const firstOf=d=>d==='D'?'55':'16';
+let code='1',cur=firstOf(F.dent);
+const visible=(dent,n)=>dent==='D'?isDec(n):dent==='P'?!isDec(n):true;
+
+/* ---------- conteo ---------- */
+function calc(rec){
+  const z=()=>({C:0,P:0,O:0,CS:0,PS:0,OS:0,pres:0,san:0,sp:0,ss:0,sell:0,sellR:0});
+  const R={p:z(),d:z()};
+  for(const n of ALLN){
+    if(!visible(rec.dent,n))continue;
+    const t=rec.pos[n];if(!t)continue;const p=PP(n),fs=faces(p),r=isDec(n)?R.d:R.p;
+    if(t.m==='5'||t.m==='8'||t.m==='9'||t.m==='x')continue;
+    if(t.m==='4'){r.P++;r.PS+=fs.length;continue}
+    r.pres++;r.sp+=fs.length;
+    if(t.m==='7'){r.O++;r.OS+=fs.length;continue}
+    const v=fs.map(k=>t.s[k]);
+    const car=v.filter(x=>x==='1'||x==='2').length,obt=v.filter(x=>x==='3').length,sn=v.filter(x=>x==='0'||x==='6').length;
+    r.CS+=car;r.OS+=obt;r.ss+=sn;
+    if(car)r.C++;else if(obt)r.O++;else r.san++;
+    if(!isDec(n)&&post(p)){if(t.s.O==='0')r.sell++;if(t.s.O==='6')r.sellR++}
+  }
+  return R;
+}
+function ihoCalc(arr){const v=arr.filter(x=>typeof x==='number');if(!v.length)return null;return v.reduce((a,b)=>a+b,0)/v.length}
+function ihoClass(x,full){if(x==null)return'';if(full)return x<=1.2?'Bueno':x<=3.0?'Regular':'Malo';return x<=0.6?'Bueno':x<=1.8?'Regular':'Malo'}
+function ihoInfo(rec){if(rec.ihoNA)return{na:true,ipb:null,ipc:null,iho:null,cls:'No aplica (edéntulo)',full:false};const ipb=ihoCalc(rec.iho||[]),ipc=ihoCalc(rec.ipc||[]);if(ipb==null)return{ipb:null,ipc,iho:null,cls:''};const full=ipc!=null;const iho=full?ipb+ipc:ipb;return{ipb,ipc,iho,full,cls:ihoClass(iho,full)}}
+function sextIndex(rec,i){return rec.dent==='D'?SEXT[i][1]:SEXT[i][0]}
+function sextTooth(rec,i){return SEXT[i].find(n=>visible(rec.dent,n)&&rec.pos[n]&&!ABS(rec.pos[n])&&!['4','5','9'].includes(rec.pos[n].m))||null}
+function ihoOf(rec){return ihoInfo(rec).iho}
+function bothPresent(rec){if(rec.dent!=='M')return[];const out=[];for(const q of[1,2,3,4])for(let p=1;p<=5;p++){const pe=q*10+p,de=(q+4)*10+p;const pr=t=>t&&!ABS(t)&&t.m!=='4'&&t.m!=='5';if(pr(rec.pos[pe])&&pr(rec.pos[de]))out.push(pe+' y '+de)}return out}
+
+/* ---------- dibujo de pieza ---------- */
+function layout(q){return{top:q<=2?'V':'L',bottom:q<=2?'L':'V',left:(q===1||q===4)?'D':'M',right:(q===1||q===4)?'M':'D'}}
+const flab=(f,q)=>f==='L'?(q<=2?'P':'L'):f;
+function toothSVG(n,t,big){
+  const q=QD(n),p=PP(n),L=layout(q),P=post(p);
+  const geo=P?{top:'2,2 34,2 25,11 11,11',right:'34,2 34,34 25,25 25,11',bottom:'34,34 2,34 11,25 25,25',left:'2,34 2,2 11,11 11,25'}
+             :{top:'2,2 34,2 25,18 11,18',right:'34,2 34,34 25,18',bottom:'34,34 2,34 11,18 25,18',left:'2,34 2,2 11,18'};
+  const lp=P?{top:[18,7.5],right:[29.5,19],bottom:[18,30.5],left:[6.5,19]}:{top:[18,10],right:[29,19],bottom:[18,28.5],left:[7,19]};
+  let h='<svg viewBox="0 0 36 36" role="img" aria-label="Pieza '+n+'">';
+  if(ABS(t)){return h+'<rect x="3" y="3" width="30" height="30" rx="3" fill="transparent" stroke="var(--bd2)" stroke-dasharray="3 3"/>'+(big?'<text x="18" y="21" text-anchor="middle" font-size="4.6" fill="var(--tx2)">'+(t.m==='8'?'no erupcionada':'ausente')+'</text>':'')+'</svg>'}
+  const fill=k=>{if(t.m==='7')return'var(--c3)';if(t.m==='9')return'var(--gray)';return SURF[t.s[k]][1]};
+  const dim=(t.m==='4'||t.m==='5')?' fill-opacity="0.35"':'';
+  for(const pos of['top','right','bottom','left']){const f=L[pos];h+='<polygon data-f="'+f+'" points="'+geo[pos]+'" fill="'+fill(f)+'"'+dim+' stroke="#6b717a" stroke-width="0.7"/>'}
+  if(P)h+='<rect data-f="O" x="11" y="11" width="14" height="14" fill="'+fill('O')+'"'+dim+' stroke="#6b717a" stroke-width="0.7"/>';
+  if(big){
+    const lc=k=>{const c=t.m==='7'?'3':t.m==='9'?'9':t.s[k];return(c==='0')?'#1c1e21':'#fff'};
+    for(const pos of['top','right','bottom','left']){const f=L[pos];h+='<text x="'+lp[pos][0]+'" y="'+(lp[pos][1]+1.6)+'" text-anchor="middle" font-size="4.4" font-weight="700" fill="'+lc(f)+'" pointer-events="none">'+flab(f,q)+'</text>'}
+    if(P)h+='<text x="18" y="19.6" text-anchor="middle" font-size="4.4" font-weight="700" fill="'+lc('O')+'" pointer-events="none">O</text>';
+  }
+  if(t.m==='7')h+='<rect x="1.2" y="1.2" width="33.6" height="33.6" fill="none" stroke="var(--c3)" stroke-width="2.4"/>';
+  if(t.m==='9')h+='<text x="18" y="22" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" pointer-events="none">?</text>';
+  if(t.m==='4'||t.m==='5'){const c=t.m==='4'?'var(--c1)':'#5c6370';h+='<line x1="4" y1="4" x2="32" y2="32" stroke="'+c+'" stroke-width="3" pointer-events="none"/><line x1="32" y1="4" x2="4" y2="32" stroke="'+c+'" stroke-width="3" pointer-events="none"/>'}
+  return h+'</svg>';
+}
+const codeLabel=t=>[t.m==='x'?null:t.m,t.f].filter(Boolean).join('·');
+
+/* ---------- paleta ---------- */
+function buildPal(){
+  const ps=$('#palS'),pt=$('#palT');ps.innerHTML='';pt.innerHTML='';
+  for(const [k,[lab,col]] of Object.entries(SURF)){const b=document.createElement('button');b.className='cd'+(k===code?' on':'');b.innerHTML='<span class="nb" style="background:'+col+';'+(k==='0'?'':'color:#fff;border-color:transparent')+'">'+k+'</span>'+lab;b.onclick=()=>{code=k;buildPal()};ps.appendChild(b)}
+  for(const [k,lab] of Object.entries(TOOTH)){const b=document.createElement('button');b.className='cd'+(k===code?' on':'');b.innerHTML='<span class="nb" style="background:var(--bg);color:var(--tx)">'+k+'</span>'+lab;b.onclick=()=>{code=k;buildPal()};pt.appendChild(b)}
+}
+
+/* ---------- aplicar código ---------- */
+function msgD(t){const m=$('#dMsg');if(!t){m.classList.add('hide');return}m.textContent=t;m.classList.remove('hide');clearTimeout(msgD.t);msgD.t=setTimeout(()=>m.classList.add('hide'),4000)}
+function apply(key,face){
+  const t=F.pos[key],n=+key;
+  const lab=m=>m==='x'?'ausente':m;
+  if(TOOTH[code]){
+    let c=code;if(c==='8'&&isDec(n))c='x';
+    if(c==='10'||c==='11'){
+      if(t.m){msgD('La '+n+' tiene el código '+lab(t.m)+' ('+(t.m==='x'?'ausente':TOOTH[t.m])+'): no admite '+c+'. Quita primero ese código.');return}
+      if(t.f&&t.f!==c){msgD('La '+n+' ya tiene el código '+t.f+'. Tócala con el '+t.f+' para quitarlo antes de poner el '+c+'.');return}
+      t.f=t.f===c?null:c;
+    }else{
+      if(t.m===c){t.m=null}
+      else if(t.m){msgD('La '+n+' ya tiene el código '+lab(t.m)+'. Tócala con ese mismo código para quitarlo y luego aplica el '+code+'.');return}
+      else if(t.f){msgD('La '+n+' tiene el código '+t.f+' ('+TOOTH[t.f]+'). Quítalo primero para poner el '+code+'.');return}
+      else{t.m=c;t.s=S0()}
+      if(c==='x')msgD('En deciduos, el 8 marca la pieza como ausente (exfoliada o aún no presente).');
+    }
+  }else if(code==='0'&&(t.m||!face)){
+    t.m=null;t.f=null;t.s=S0();
+  }else{
+    if(t.m){msgD('La '+n+' tiene el código '+lab(t.m)+'. Quítalo primero para registrar sus superficies'+(ABS(t)?' (o usa «Marcar presente»)':'')+'.');cur=key;render();return}
+    if(!face)return;
+    t.s[face]=(t.s[face]===code)?'0':code;
+  }
+  F.touched=true;cur=key;persist();render();
+}
+const narrow=()=>window.matchMedia('(max-width:600px)').matches;
+
+/* ---------- render odontograma ---------- */
+function render(){
+  const odo=$('#odo');odo.innerHTML='';
+  const rows=ROWS[F.dent];
+  rows.forEach(([list,top],ri)=>{
+    if(ri===rows.length/2){const s=document.createElement('div');s.className='sep';odo.appendChild(s)}
+    const w=document.createElement('div');w.className='orow';
+    const pad=(16-list.length)/2;for(let i=0;i<pad;i++)w.appendChild(document.createElement('div'));
+    list.forEach((n,i)=>{
+      const c=document.createElement('div');c.className='tc'+(i===list.length/2?' mid':'');
+      const key=String(n),t=F.pos[key];if(key===cur)c.classList.add('cur');
+      const nm='<div>'+n+'</div>',cl='<div class="cl">'+(codeLabel(t)||'&nbsp;')+'</div>';
+      c.innerHTML=top?nm+toothSVG(n,t)+cl:cl+toothSVG(n,t)+nm;
+      c.onclick=e=>{const f=e.target.getAttribute&&e.target.getAttribute('data-f');if(narrow()&&!TOOTH[code]&&!(code==='0'&&t.m)){cur=key;render();return}apply(key,f)};
+      w.appendChild(c);
+    });
+    for(let i=0;i<pad;i++)w.appendChild(document.createElement('div'));
+    odo.appendChild(w);
+  });
+  $('#tapHint').textContent=(narrow()?'Códigos 4–11: toca el diente para poner o quitar. Superficies: toca el diente para ampliarlo y marca sus caras abajo.':'Códigos 4–11: toca el diente para poner o quitar. Superficies: toca la cara; otro toque con el mismo código la revierte.')+' Cada pieza admite un solo código de pieza completa; para cambiarlo, quita primero el que tiene. Con el código 0, tocar una pieza ausente o con código de pieza completa la deja sana y en blanco.';
+  const bp=bothPresent(F);const al=$('#alerta');al.textContent=bp.length?'Revisar: permanente y su deciduo presentes a la vez ('+bp.join(', ')+').':'';al.classList.toggle('hide',!bp.length);
+  renderZoom();renderStats();renderIHO();
+}
+function renderZoom(){
+  if(!F.pos[cur]||!visible(F.dent,+cur))cur=firstOf(F.dent);
+  const n=+cur,q=QD(n),p=PP(n),t=F.pos[cur];
+  $('#zsvg').innerHTML=toothSVG(n,t,true);
+  $('#zsvg').onclick=e=>{const f=e.target.getAttribute&&e.target.getAttribute('data-f');apply(cur,f)};
+  $('#zt').textContent='Pieza '+n+' · '+(isDec(n)?DNAME[p]+' deciduo':PNAME[p])+' '+QNAME[q];
+  let st;
+  if(t.m==='x')st='Ausente';
+  else if(t.m)st='Código '+t.m+': '+TOOTH[t.m];
+  else st=faces(p).map(f=>flab(f,q)+' '+t.s[f]).join(' · ');
+  if(t.f)st+=' · '+t.f+' '+TOOTH[t.f];
+  $('#zs').textContent=st;
+  const sw=$('#bSwap');sw.classList.remove('hide');
+  sw.textContent=ABS(t)?'Marcar presente':(isDec(n)?'Marcar ausente':'Marcar no erupcionada (8)');
+}
+function nav(d){const vis=ORDERS[F.dent].map(String).filter(k=>k===cur||!ABS(F.pos[k]));let i=vis.indexOf(cur);i=Math.max(0,Math.min(vis.length-1,i+d));cur=vis[i];render()}
+$('#bPrev').onclick=()=>nav(-1);
+$('#bNext').onclick=()=>nav(1);
+$('#bSano').onclick=()=>{const t=F.pos[cur];t.m=null;t.f=null;t.s=S0();F.touched=true;persist();nav(1)};
+$('#bClr').onclick=()=>{const t=F.pos[cur];t.m=null;t.f=null;t.s=S0();persist();render()};
+$('#bSwap').onclick=()=>{const t=F.pos[cur];if(ABS(t))t.m=null;else{t.m=isDec(+cur)?'x':'8';t.f=null;t.s=S0()}F.touched=true;persist();render()};
+
+/* ---------- tablas plegables ---------- */
+const openSt=LS.get(LSP+'open',{p:false,d:false});
+function renderStats(){
+  const R=calc(F),p=R.p,d=R.d;
+  const tr=rows=>'<table class="t">'+rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('')+'</table>';
+  let h='';
+  if(F.dent!=='D')h+='<details data-k="p"'+(openSt.p?' open':'')+'><summary>Dentición permanente <span class="k">CPOD '+(p.C+p.P+p.O)+' · CPOS '+(p.CS+p.PS+p.OS)+'</span></summary>'+tr([
+    ['CPOD (C '+p.C+' · P '+p.P+' · O '+p.O+')',p.C+p.P+p.O],['CPOS (C '+p.CS+' · P '+p.PS+' · O '+p.OS+')',p.CS+p.PS+p.OS],
+    ['NDPP · dientes presentes',p.pres],['NDPS · dientes sanos',p.san],['NSPP · superficies presentes',p.sp],['NSPS · superficies sanas',p.ss],
+    ['NSPSS · sanas para sellantes',p.sell],['NSPSRS · con sellante',p.sellR]])+'</details>';
+  if(F.dent!=='P')h+='<details data-k="d"'+(openSt.d?' open':'')+'><summary>Dentición decidua <span class="k">ceod '+(d.C+d.P+d.O)+' · ceos '+(d.CS+d.PS+d.OS)+'</span></summary>'+tr([
+    ['ceod (c '+d.C+' · e '+d.P+' · o '+d.O+')',d.C+d.P+d.O],['ceos (c '+d.CS+' · e '+d.PS+' · o '+d.OS+')',d.CS+d.PS+d.OS],
+    ['nddp · dientes presentes',d.pres],['ndds · dientes sanos',d.san],['nsdp · superficies presentes',d.sp],['nsds · superficies sanas',d.ss]])+'</details>';
+  $('#stats').innerHTML=h;
+  $('#stats').querySelectorAll('details').forEach(el=>el.addEventListener('toggle',()=>{openSt[el.dataset.k]=el.open;LS.set(LSP+'open',openSt)}));
+}
+
+/* ---------- IHO ---------- */
+function renderIHO(){
+  const box=$('#iho');box.innerHTML='';
+  const na=!!F.ihoNA;
+  const ck=document.createElement('label');ck.className='row';ck.style.cssText='gap:8px;margin-bottom:8px;font-size:14px';
+  ck.innerHTML='<input type="checkbox" style="width:22px;min-height:22px;height:22px"'+(na?' checked':'')+'> Paciente edéntulo: no es posible aplicar el IHO';
+  ck.querySelector('input').onchange=e=>{F.ihoNA=e.target.checked;persist();renderIHO()};
+  box.appendChild(ck);
+  if(!F.ipc)F.ipc=[null,null,null,null,null,null];
+  [['iho','Placa blanda (IPB)'],['ipc','Placa calcificada (IPC)']].forEach(([arr,title],bi)=>{
+    const h=document.createElement('div');h.style.cssText='font-weight:600;font-size:14px;margin:'+(bi?'14px':'4px')+' 0 4px;padding-top:'+(bi?'10px':'0')+';border-top:'+(bi?'1px solid var(--bd)':'0');h.textContent=title;
+    if(na)h.style.opacity='0.4';box.appendChild(h);
+    SEXT.forEach((_,i)=>{
+      const r=document.createElement('div');r.className='ihor';if(na)r.style.opacity='0.4';
+      const idx=sextIndex(F,i),used=sextTooth(F,i);
+      r.innerHTML=used==null?'<div><b>'+idx+'</b><div class="muted" style="font-size:11px">sin pieza del grupo</div></div>'
+        :used===idx?'<div><b>'+used+'</b></div>':'<div><b>'+used+'</b><div class="muted" style="font-size:11px">en lugar de '+idx+'</div></div>';
+      const seg=document.createElement('div');seg.className='seg';
+      [0,1,2,3,'x'].forEach(v=>{const b=document.createElement('button');b.textContent=v==='x'?'NR':v;b.disabled=na;if(F[arr][i]===v)b.className='on';b.onclick=()=>{F[arr][i]=F[arr][i]===v?null:v;persist();renderIHO()};seg.appendChild(b)});
+      r.appendChild(seg);box.appendChild(r);
+    });
+  });
+  const I=ihoInfo(F);
+  $('#ihoRes').textContent=na?'IHO: no aplica (paciente edéntulo).':I.ipb==null?'Marca la placa blanda (IPB) y la placa calcificada (IPC) de cada sextante. NR = no registrable. Si falta la pieza índice, se usa su sucedánea o la siguiente pieza presente del mismo grupo.':
+    I.full?'IPB = '+fmt(I.ipb)+' · IPC = '+fmt(I.ipc)+' · IHO-S = '+fmt(I.iho)+' · '+I.cls+' (0–1,2 bueno · 1,3–3,0 regular · 3,1–6,0 malo)':'IPB = '+fmt(I.ipb)+' · '+I.cls+' (solo placa: 0–0,6 bueno · 0,7–1,8 regular · 1,9–3 malo). Registra la placa calcificada para obtener el IHO-S completo.';
+}
+
+/* ---------- formulario ---------- */
+const sel=$('#fGrado');sel.innerHTML='<option value="">—</option>'+GRADOS.map(g=>'<option>'+g+'</option>').join('');
+function fillForm(){
+  if(!F.est)F.est=estBlank();if(F.colegio==null)F.colegio='';$('#fNom').value=F.nombre;$('#fNac').value=F.nac||'';$('#fDni').value=F.dni||'';$('#fSis').value=F.sis||'';$('#fDir').value=F.dir||'';$('#fCol').value=F.colegio||'';$('#fEdad').value=F.edad;edadHint();renderEst();$('#fSexo').value=F.sexo;$('#fGrado').value=F.grado;$('#fTipo').value=F.tipo;$('#fFecha').value=F.fecha;$('#fDent').value=F.dent;$('#fObs').value=F.obs;
+  $('#ftitle').textContent=F.id?'Editando registro':'Datos del paciente';
+  $('#bSave').textContent=F.id?'Guardar cambios':'Guardar registro';
+  toggleCtrl();render();
+}
+function toggleCtrl(){const c=F.tipo!=='Diagnóstico';$('#cEst').classList.toggle('hide',c);$('#cOdo').classList.toggle('hide',c);$('#cCtrl').classList.toggle('hide',!c)}
+function persist(){LS.set(LSP+'draft',F)}
+$('#fNom').oninput=e=>{F.nombre=e.target.value;persist()};
+$('#fNom').onchange=()=>prefill();
+$('#fEdad').oninput=e=>{F.edad=e.target.value;edadHint();if(!F.touched){F.pos=blankPos(F.dent,F.edad)}persist();render()};
+$('#fSexo').onchange=e=>{F.sexo=e.target.value;persist()};
+function ageOf(nac,fecha){if(!nac||!fecha)return null;const a=nac.split('-').map(Number),b=fecha.split('-').map(Number);let y=b[0]-a[0];if(b[1]<a[1]||(b[1]===a[1]&&b[2]<a[2]))y--;return y}
+function ageYMD(nac,fecha){if(!nac||!fecha)return null;const [y1,m1,d1]=nac.split('-').map(Number),[y2,m2,d2]=fecha.split('-').map(Number);let y=y2-y1,m=m2-m1,d=d2-d1;if(d<0){m--;d+=new Date(y2,m2-1,0).getDate()}if(m<0){y--;m+=12}if(y<0)return null;return y+' a '+m+' m '+d+' d'}
+function edadHint(){const h=$('#edadHint'),y=ageOf(F.nac,F.fecha);$('#fEdad').readOnly=false;h.style.fontSize='12px';h.style.fontWeight='400';h.style.color='var(--tx2)';if(y==null){h.textContent=F.nac?'':'Escríbela si no recuerda su fecha de nacimiento';return}if(y<0||y>110){h.textContent='Revisa la fecha de nacimiento';h.style.color='var(--warn)';return}if(String(y)!==String(F.edad)){h.textContent='No coincide con la fecha de nacimiento ('+ageYMD(F.nac,F.fecha)+')';h.style.color='var(--warn)';return}h.textContent=ageYMD(F.nac,F.fecha);h.style.fontSize='13px';h.style.fontWeight='600'}
+function setAge(){const y=ageOf(F.nac,F.fecha);if(y!=null&&y>=0&&y<=110){F.edad=String(y);$('#fEdad').value=F.edad;F.edadYMD=ageYMD(F.nac,F.fecha)||'';if(!F.touched)F.pos=blankPos(F.dent,F.edad)}edadHint();persist();render()}
+$('#fNac').onchange=e=>{F.nac=e.target.value;setAge()};
+$('#fDni').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'');F.dni=e.target.value;persist()};
+$('#fSis').oninput=e=>{F.sis=e.target.value;persist()};
+$('#fDir').oninput=e=>{F.dir=e.target.value;persist()};
+$('#fCol').oninput=e=>{F.colegio=e.target.value;persist()};
+function renderEst(){
+  const box=$('#est');box.innerHTML='';
+  EST.forEach(k=>{
+    const it=F.est[k]||(F.est[k]={v:'NO',d:''});
+    const r=document.createElement('div');r.className='estr';
+    r.innerHTML='<div>'+k+'</div>';
+    const seg=document.createElement('div');seg.className='seg';
+    ['NO','SI'].forEach(v=>{const b=document.createElement('button');b.textContent=v==='SI'?'SÍ':'NO';if(it.v===v)b.className='on';b.onclick=()=>{it.v=v;persist();renderEst()};seg.appendChild(b)});
+    const inp=document.createElement('input');inp.placeholder=it.v==='SI'?'Describe el hallazgo':'';inp.value=it.d||'';inp.disabled=it.v!=='SI';inp.oninput=e=>{it.d=e.target.value;persist()};
+    r.append(seg,inp);box.appendChild(r);
+  });
+}
+$('#fGrado').onchange=e=>{F.grado=e.target.value;persist()};
+$('#fFecha').onchange=e=>{F.fecha=e.target.value;setAge()};
+$('#fObs').oninput=e=>{F.obs=e.target.value;persist()};
+$('#fTipo').onchange=e=>{F.tipo=e.target.value;toggleCtrl();persist();prefill()};
+$('#fDent').onchange=e=>{F.dent=e.target.value;F.pos=blankPos(F.dent,F.edad);F.touched=false;cur=firstOf(F.dent);persist();render()};
+function prefill(){
+  if(F.id)return;
+  const n=norm(F.nombre);if(!n)return;
+  const prev=allRecords().filter(r=>norm(r.nombre)===n).sort((a,b)=>(b.actualizado||0)-(a.actualizado||0))[0];
+  if(!prev)return;
+  let ch=false;
+  if(!F.edad&&prev.edad){F.edad=prev.edad;ch=true}
+  if(!F.sexo&&prev.sexo){F.sexo=prev.sexo;ch=true}
+  if(!F.grado&&prev.grado){F.grado=prev.grado;ch=true}
+  for(const k of['nac','dni','sis','dir']){if(!F[k]&&prev[k]){F[k]=prev[k];ch=true}}
+  if(F.nac){const y=ageOf(F.nac,F.fecha);if(y!=null&&y>=0)F.edad=String(y)}
+  if(F.tipo!=='Diagnóstico'&&prev.dent){F.dent=prev.dent;F.pos=prev.pos?JSON.parse(JSON.stringify(prev.pos)):blankPos(prev.dent,F.edad)}
+  if(ch||F.tipo!=='Diagnóstico'){persist();fillForm();const m=$('#prefMsg');m.textContent='Datos cargados del registro anterior de '+prev.nombre+' ('+prev.tipo+', '+prev.fecha+').';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),5000)}
+}
+$('#bNuevo').onclick=()=>{F=newForm();cur=firstOf('P');persist();fillForm();$('#saveMsg').classList.add('hide');window.scrollTo(0,0)};
+
+/* ---------- guardado y nube ---------- */
+let db=null,dbState='connecting',remote=LS.get(LSP+'cache',{}),pending=LS.get(LSP+'pending',{}),dels=LS.get(LSP+'del',[]),flushing=false,readOnly=false,downloads=null;
+function allRecords(){const m=Object.assign({},remote);for(const [k,v] of Object.entries(pending))if(!v._t)m[k]=v;dels.forEach(id=>delete m[id]);return Object.values(m)}
+let capRemote=LS.get(LSP+'capcache',{});
+function allCapso(){const m=Object.assign({},capRemote);for(const [k,v] of Object.entries(pending))if(v._t==='capso')m[k]=v;dels.forEach(id=>{if(id.startsWith('capso:'))delete m[id.slice(6)]});return Object.values(m)}
+let confirmDup=null;
+$('#bSave').onclick=()=>{
+  const sm=$('#saveMsg');sm.className='msg';
+  const errs=[];
+  if(!F.nombre.trim())errs.push('nombre');
+  if(!(+F.edad>0))errs.push('edad');
+  if(!F.sexo)errs.push('sexo');
+  if(errs.length){sm.textContent='Falta: '+errs.join(', ')+'.';sm.classList.remove('hide');return}
+  if(F.tipo==='Diagnóstico'&&!F.id&&confirmDup!==norm(F.nombre)){
+    const dup=allRecords().find(r=>r.tipo==='Diagnóstico'&&norm(r.nombre)===norm(F.nombre));
+    if(dup){confirmDup=norm(F.nombre);sm.textContent='Ya hay un diagnóstico de '+dup.nombre+' ('+dup.fecha+'). Toca «Guardar» otra vez si es otra persona con el mismo nombre.';sm.classList.remove('hide');return}
+  }
+  const warn=[];
+  if(F.dni&&F.dni.length!==8)warn.push('el DNI no tiene 8 dígitos');
+  if(F.dent==='D'&&+F.edad>12)warn.push('dentición decidua con '+F.edad+' años');
+  if(F.dent==='M'&&+F.edad>14)warn.push('dentición mixta con '+F.edad+' años');
+  const now=Date.now();
+  const id=F.id||('r'+now.toString(36)+Math.random().toString(36).slice(2,7));
+  const rec={id,nombre:F.nombre.trim(),nac:F.nac||'',dni:F.dni||'',sis:F.sis||'',dir:F.dir||'',colegio:F.colegio||'',edadYMD:ageYMD(F.nac,F.fecha)||'',est:F.est||estBlank(),edad:+F.edad,sexo:F.sexo,grado:F.grado,tipo:F.tipo,fecha:F.fecha,dent:F.dent,pos:F.pos,iho:F.iho,ipc:F.ipc||[null,null,null,null,null,null],ihoNA:!!F.ihoNA,ihoT:SEXT.map((_,i)=>sextTooth(F,i)),obs:F.obs,creado:F.creado||now,actualizado:now};
+  pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
+  const nm=rec.nombre;
+  F=newForm();F.colegio=rec.colegio;F.grado=rec.grado;F.tipo=rec.tipo;F.fecha=rec.fecha;F.dent=rec.dent;F.pos=blankPos(rec.dent,'');cur=firstOf(F.dent);confirmDup=null;persist();fillForm();
+  sm.className='msg ok';sm.textContent='Guardado: '+nm+'.'+(warn.length?' Revisa: '+warn.join('; ')+'.':'')+' Listo para el siguiente paciente (se mantienen grado, tipo, fecha y dentición).';sm.classList.remove('hide');
+  window.scrollTo({top:0,behavior:'smooth'});
+  renderList();flush();
+};
+const inflight=new Set();
+function flush(){
+  if(!db||readOnly){updatePill();return}
+  const fail=(id,e)=>{inflight.delete(id);if(e&&e.code==='permission-denied'){readOnly=true}updatePill()};
+  for(const id of Object.keys(pending)){if(inflight.has(id))continue;inflight.add(id);const rec=pending[id];
+    db.collection(rec._t==='capso'?COL_C:COL_R).doc(id).set(rec).then(()=>{inflight.delete(id);if(pending[id]&&pending[id].actualizado===rec.actualizado){delete pending[id];LS.set(LSP+'pending',pending)}updatePill();renderList()},e=>fail(id,e))}
+  for(const id of [...dels]){if(inflight.has('d'+id))continue;inflight.add('d'+id);const isC=id.startsWith('capso:');
+    db.collection(isC?COL_C:COL_R).doc(isC?id.slice(6):id).delete().then(()=>{inflight.delete('d'+id);dels=dels.filter(x=>x!==id);LS.set(LSP+'del',dels);updatePill();renderList()},e=>fail('d'+id,e))}
+  updatePill();
+}
+function updatePill(){
+  const p=$('#pill'),n=Object.keys(pending).length+dels.length;
+  p.className='pill';
+  if(!db){p.classList.add('warn');p.textContent=n?n+' sin subir · inicia sesión':'Sin sesión';return}
+  if(readOnly){p.classList.add('warn');p.textContent='Sin permiso para guardar en la nube';return}
+  if(n){p.classList.add('warn');p.textContent=n+' pendiente'+(n>1?'s':'')+' de subir'+(navigator.onLine?'':' · sin señal');return}
+  if(!navigator.onLine){p.classList.add('warn');p.textContent='Sin señal · todo guardado en el equipo';return}
+  if(dbState==='offline'){p.classList.add('warn');p.textContent='Sin conexión · se guarda aquí';return}
+  p.textContent='Todo guardado en la nube';
+}
+window.addEventListener('online',()=>flush());window.addEventListener('offline',()=>updatePill());
+
+/* ---------- lista ---------- */
+let delArm=null;
+function renderList(){
+  const all=allRecords().sort((a,b)=>(b.actualizado||0)-(a.actualizado||0));
+  const capAll=allCapso();$('#nreg').textContent=all.length+capAll.length;$('#nO').textContent=all.length;
+  $('#names2').innerHTML=[...new Set([...all,...capAll].map(r=>r.nombre))].map(n=>'<option value="'+esc(n)+'">').join('');
+  $('#list').classList.toggle('hide',lview!=='o');$('#clist').classList.toggle('hide',lview!=='c');$('#sum').classList.toggle('hide',lview!=='o');
+  renderCapList();
+  $('#names').innerHTML=[...new Set(all.map(r=>r.nombre))].map(n=>'<option value="'+esc(n)+'">').join('');
+  const dx=all.filter(r=>r.tipo==='Diagnóstico');
+  const cp=dx.filter(r=>r.dent!=='D').map(r=>{const p=calc(r).p;return p.C+p.P+p.O});
+  const ce=dx.filter(r=>r.dent!=='P').map(r=>{const d=calc(r).d;return d.C+d.P+d.O});
+  const ih=all.filter(r=>r.tipo==='Diagnóstico').map(r=>ihoOf(r)).filter(x=>x!=null);
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  $('#sum').innerHTML='<div><b>'+dx.length+'</b><span class="muted">diagnósticos</span></div><div><b>'+(all.length-dx.length)+'</b><span class="muted">controles IHO</span></div><div><b>'+fmt(avg(cp))+'</b><span class="muted">CPOD promedio</span></div><div><b>'+fmt(avg(ce))+'</b><span class="muted">ceod promedio</span></div><div><b>'+fmt(avg(ih))+'</b><span class="muted">IHO-S promedio (dx)</span></div>';
+  const q=norm($('#q').value);
+  const list=$('#list');list.innerHTML='';
+  const shown=all.filter(r=>!q||norm(r.nombre+' '+r.grado).includes(q));
+  if(!shown.length){list.innerHTML='<p class="muted">'+(all.length?'Sin resultados.':'Aún no hay registros.')+'</p>';return}
+  shown.forEach(r=>{
+    const R=calc(r);const ix=[];
+    if(r.tipo==='Diagnóstico'){if(r.dent!=='D')ix.push('CPOD '+(R.p.C+R.p.P+R.p.O));if(r.dent!=='P')ix.push('ceod '+(R.d.C+R.d.P+R.d.O))}
+    const ih=ihoOf(r);if(ih!=null)ix.push('IHO '+fmt(ih));
+    const el=document.createElement('div');el.className='it';
+    el.innerHTML='<div><b>'+esc(r.nombre)+'</b>'+(pending[r.id]?'<span class="badge">sin subir</span>':'')+'<div class="muted">'+esc(r.edadYMD||(r.edad+' a'))+' · '+esc((r.sexo||'').charAt(0))+' · '+esc(r.grado||'—')+' · '+esc(r.tipo)+' · '+esc(r.fecha)+'</div><div class="muted">'+ix.join(' · ')+'</div></div>';
+    const bx=document.createElement('div');bx.className='row';
+    const be=document.createElement('button');be.className='btn sm';be.textContent='Editar';
+    be.onclick=()=>{F=fixPos(JSON.parse(JSON.stringify(r)));F.touched=true;cur=firstOf(F.dent);persist();show('N');fillForm();window.scrollTo(0,0)};
+    const bd=document.createElement('button');bd.className='btn sm danger';bd.textContent=delArm===r.id?'¿Eliminar? Toca otra vez':'Eliminar';
+    bd.onclick=()=>{if(delArm!==r.id){delArm=r.id;renderList();setTimeout(()=>{if(delArm===r.id){delArm=null;renderList()}},4000);return}
+      delArm=null;if(pending[r.id]){delete pending[r.id];LS.set(LSP+'pending',pending)}
+      if(remote[r.id]){dels.push(r.id);LS.set(LSP+'del',dels)}
+      renderList();flush()};
+    const bp=document.createElement('button');bp.className='btn sm';bp.textContent='PDF';bp.onclick=()=>openPDF(r);bx.append(bp,be,bd);el.appendChild(bx);list.appendChild(el);
+  });
+}
+$('#q').oninput=renderList;
+
+/* ---------- exportar ---------- */
+const HEAD=['Fecha de examen','Tipo de evaluación','Nombre','Fecha de nacimiento','Edad (años)','Edad (a, m, d)','Sexo','DNI','SIS','Dirección','Colegio','Grado y sección','ATM','Ganglios','Queilitis','Lengua','Aftas','Otros','Dentición','C','P','O','CPOD','CS','PS','OS','CPOS','NDPP','NDPS','NSPP','NSPS','NSPSS','NSPSRS','c','e','o','ceod','cs','es','os','ceos','nddp','ndds','nsdp','nsds','IPB s1','IPB s2','IPB s3','IPB s4','IPB s5','IPB s6','IPC s1','IPC s2','IPC s3','IPC s4','IPC s5','IPC s6','Piezas IHO','IPB','IPC','IHO-S','Clasificación IHO','Observación','Odontograma (código por cara)'];
+const DN={P:'Permanente',M:'Mixta',D:'Decidua'};
+function rowOf(r){
+  fixPos(r);const R=calc(r),p=R.p,d=R.d,dx=r.tipo==='Diagnóstico';
+  const P=r.dent!=='D'&&dx,D=r.dent!=='P'&&dx,b=v=>v;
+  const pv=P?[p.C,p.P,p.O,p.C+p.P+p.O,p.CS,p.PS,p.OS,p.CS+p.PS+p.OS,p.pres,p.san,p.sp,p.ss,p.sell,p.sellR]:Array(14).fill('');
+  const dv=D?[d.C,d.P,d.O,d.C+d.P+d.O,d.CS,d.PS,d.OS,d.CS+d.PS+d.OS,d.pres,d.san,d.sp,d.ss]:Array(12).fill('');
+  const I=ihoInfo(r),ih=I.iho,r2=x=>x==null?'':Math.round(x*100)/100,sx=a=>(r.ihoNA?Array(6).fill('NA'):(a||[null,null,null,null,null,null]).map(v=>v==null?'':v==='x'?'NR':v));
+  const od=dx?ORDERS[r.dent].filter(n=>r.pos[n]&&!ABS(r.pos[n])).map(n=>{const t=r.pos[n];const q=QD(n),pp=PP(n);if(t.m)return n+'['+t.m+(t.f?'·'+t.f:'')+']';return n+'['+faces(pp).map(f=>flab(f,q)+t.s[f]).join(' ')+(t.f?' ·'+t.f:'')+']'}).join(' '):'';
+  const est=k=>{const e=(r.est||{})[k];if(!e||r.tipo!=='Diagnóstico')return'';return e.v==='SI'?'SÍ'+(e.d?': '+e.d:''):'NO'};
+  return[r.fecha,r.tipo,r.nombre,r.nac||'',r.edad,r.edadYMD||ageYMD(r.nac,r.fecha)||'',r.sexo,r.dni||'',r.sis||'',r.dir||'',r.colegio||'',r.grado,...EST.map(est),DN[r.dent],...pv,...dv,...sx(r.iho),...sx(r.ipc),r.ihoNA?'':SEXT.map((_,i)=>sextTooth(r,i)||'—').join(', '),r2(I.ipb),r2(I.ipc),r2(ih),I.cls,r.obs||'',od];
+}
+function rows(){return allRecords().sort((a,b)=>(a.creado||0)-(b.creado||0)).map(rowOf)}
+function lmsg(t,ok){const m=$('#lMsg');m.className='msg'+(ok?' ok':'');m.textContent=t;setTimeout(()=>m.classList.add('hide'),6000)}
+$('#bCopy').onclick=()=>{
+  const tsv=(lview==='c'?[CAP_HEAD,...capRows()]:[HEAD,...rows()]).map(r=>r.map(v=>String(v).replace(/[\t\n]/g,' ')).join('\t')).join('\n');
+  try{navigator.clipboard.writeText(tsv).then(()=>lmsg('Tabla copiada. Pégala en la celda A1 de una hoja de Google Sheets o Excel.',true),()=>lmsg('No se pudo copiar en este dispositivo.'))}catch(e){lmsg('No se pudo copiar en este dispositivo.')}
+};
+function loadXLSX(){return new Promise((res,rej)=>{if(window.XLSX)return res();const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+$('#bXlsx').onclick=async()=>{
+  if(!downloads){lmsg('La descarga no está disponible aquí; usa «Copiar tabla».');return}
+  try{
+    await loadXLSX();
+    const ws=XLSX.utils.aoa_to_sheet([HEAD,...rows()]);
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'CPOD ceod IHO');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([CAP_HEAD,...capRows()]),'CAPSO codificado');
+    const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    await downloads.save({filename:'CPOD CAPSO Paccha '+today()+'.xlsx',data:new Blob([out])});
+    lmsg('Excel descargado.',true);
+  }catch(e){if(e&&e.code==='declined')return;lmsg('No se pudo generar el Excel'+(e&&e.code?' ('+e.code+')':'')+'. Usa «Copiar tabla».')}
+};
+
+/* ---------- ficha PDF ---------- */
+const HW=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+function tw(str,size,bold){let w=0;for(const ch of str){let c=ch.normalize('NFD').charCodeAt(0);if(ch==='º')c=111;const v=(c>=32&&c<=126)?HW[c-32]:556;w+=v}return w/1000*size*(bold?1.06:1)}
+function Doc(){const pages=[];let cur=null;const api={
+  page(w,h){cur={w,h,c:[]};pages.push(cur);return api},
+  line(x1,y1,x2,y2,lw=0.8,dash){cur.c.push({t:'l',x1,y1,x2,y2,lw,dash});return api},
+  rect(x,y,w,h,lw=0.8,fill){cur.c.push({t:'r',x,y,w,h,lw,fill});return api},
+  ell(cx,cy,rx,ry,lw=0.8,fill){cur.c.push({t:'e',cx,cy,rx,ry,lw,fill});return api},
+  text(x,y,str,size=10,o={}){str=String(str==null?'':str);if(!str)return api;const w=tw(str,size,o.b);const x0=o.a==='c'?x-w/2:o.a==='r'?x-w:x;cur.c.push({t:'t',x:x0,y,str,size,b:!!o.b,i:!!o.i,col:o.col||'#000'});return api},
+  pages};return api}
+const hex=c=>{const n=parseInt(c.slice(1),16);return[(n>>16&255)/255,(n>>8&255)/255,(n&255)/255].map(v=>v.toFixed(3)).join(' ')};
+function toSVG(pg){
+  let h='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+pg.w+' '+pg.h+'" style="background:#fff;width:100%;display:block">';
+  for(const c of pg.c){
+    if(c.t==='l')h+='<line x1="'+c.x1+'" y1="'+c.y1+'" x2="'+c.x2+'" y2="'+c.y2+'" stroke="#000" stroke-width="'+c.lw+'"'+(c.dash?' stroke-dasharray="3 3"':'')+'/>';
+    else if(c.t==='r')h+='<rect x="'+c.x+'" y="'+c.y+'" width="'+c.w+'" height="'+c.h+'" fill="'+(c.fill||'none')+'" stroke="'+(c.lw?'#000':'none')+'" stroke-width="'+(c.lw||0)+'"/>';
+    else if(c.t==='e')h+='<ellipse cx="'+c.cx+'" cy="'+c.cy+'" rx="'+c.rx+'" ry="'+c.ry+'" fill="'+(c.fill||'none')+'" stroke="#000" stroke-width="'+c.lw+'"/>';
+    else h+='<text x="'+c.x+'" y="'+c.y+'" font-family="Helvetica,Arial,sans-serif" font-size="'+c.size+'"'+(c.b?' font-weight="700"':'')+(c.i?' font-style="italic"':'')+' fill="'+c.col+'" xml:space="preserve">'+esc(c.str)+'</text>';
+  }
+  return h+'</svg>';
+}
+function toPDF(pages){
+  const K=842/1280,objs=[];const add=s=>{objs.push(s);return objs.length};
+  const fonts=['Helvetica','Helvetica-Bold','Helvetica-Oblique','Helvetica-BoldOblique'].map(n=>add('<< /Type /Font /Subtype /Type1 /BaseFont /'+n+' /Encoding /WinAnsiEncoding >>'));
+  const enc=s=>{let o='';for(const ch of s){let c=ch.charCodeAt(0);if(c>255)c=63;const k=String.fromCharCode(c);o+=(k==='\\'||k==='('||k===')')?'\\'+k:k}return o};
+  const n=v=>(Math.round(v*100)/100).toString();
+  const pageIds=[];const kids=[];const pagesId=objs.length+1+pages.length*2;
+  for(const pg of pages){
+    const W=pg.w*K,H=pg.h*K;let cs=n(K)+' 0 0 '+n(-K)+' 0 '+n(H)+' cm\n';
+    for(const c of pg.c){
+      if(c.t==='l')cs+=n(c.lw)+' w '+(c.dash?'[3 3] 0 d ':'[] 0 d ')+n(c.x1)+' '+n(c.y1)+' m '+n(c.x2)+' '+n(c.y2)+' l S\n';
+      else if(c.t==='r'){if(c.fill)cs+=hex(c.fill)+' rg '+n(c.x)+' '+n(c.y)+' '+n(c.w)+' '+n(c.h)+' re f 0 g\n';if(c.lw)cs+=n(c.lw)+' w [] 0 d '+n(c.x)+' '+n(c.y)+' '+n(c.w)+' '+n(c.h)+' re S\n'}
+      else if(c.t==='e'){const k=0.5523,x=c.cx,y=c.cy,a=c.rx,b=c.ry;const p=n(x+a)+' '+n(y)+' m '+n(x+a)+' '+n(y+b*k)+' '+n(x+a*k)+' '+n(y+b)+' '+n(x)+' '+n(y+b)+' c '+n(x-a*k)+' '+n(y+b)+' '+n(x-a)+' '+n(y+b*k)+' '+n(x-a)+' '+n(y)+' c '+n(x-a)+' '+n(y-b*k)+' '+n(x-a*k)+' '+n(y-b)+' '+n(x)+' '+n(y-b)+' c '+n(x+a*k)+' '+n(y-b)+' '+n(x+a)+' '+n(y-b*k)+' '+n(x+a)+' '+n(y)+' c ';cs+=(c.fill?hex(c.fill)+' rg '+p+'f 0 g\n'+p:p)+n(c.lw)+' w [] 0 d S\n'}
+      else{const f=1+(c.b?1:0)+(c.i?2:0);cs+='BT '+hex(c.col)+' rg /F'+f+' '+n(c.size)+' Tf 1 0 0 -1 '+n(c.x)+' '+n(c.y)+' Tm ('+enc(c.str)+') Tj ET 0 g\n'}
+    }
+    const cid=add('<< /Length '+cs.length+' >>\nstream\n'+cs+'endstream');
+    const pid=add('<< /Type /Page /Parent '+pagesId+' 0 R /MediaBox [0 0 '+n(W)+' '+n(H)+'] /Resources << /Font << /F1 '+fonts[0]+' 0 R /F2 '+fonts[1]+' 0 R /F3 '+fonts[2]+' 0 R /F4 '+fonts[3]+' 0 R >> >> /Contents '+cid+' 0 R >>');
+    kids.push(pid+' 0 R');
+  }
+  add('<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+kids.length+' >>');
+  const cat=add('<< /Type /Catalog /Pages '+pagesId+' 0 R >>');
+  let out='%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';const offs=[];
+  objs.forEach((o,i)=>{offs.push(out.length);out+=(i+1)+' 0 obj\n'+o+'\nendobj\n'});
+  const xref=out.length;out+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n'+offs.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('');
+  out+='trailer\n<< /Size '+(objs.length+1)+' /Root '+cat+' 0 R >>\nstartxref\n'+xref+'\n%%EOF';
+  const u=new Uint8Array(out.length);for(let i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;return u;
+}
+const ALUMNO='Breyner Palomino Suárez';
+const codeCol=v=>v==='1'||v==='2'||v==='4'?'#c4262e':v==='3'||v==='7'?'#1f4fd1':v==='6'?'#1f7a3d':'#000';
+function buildFicha(r){
+  fixPos(r);const D=Doc();const dx=r.tipo==='Diagnóstico';
+  /* página 1 */
+  D.page(1280,905);
+  D.text(134,87,'UNIVERSIDAD PERUANA CAYETANO HEREDIA',10,{b:1,i:1}).text(134,103,'FACULTAD DE ESTOMATOLOGÍA ROBERTO BELTRAN NEIRA',10,{b:1,i:1}).text(134,119,'DEPARTAMENTO ACADÉMICO DE ODONTOLOGÍA SOCIAL',10,{b:1,i:1});
+  D.text(978,118,'Alumno:',10,{i:1}).rect(948,122,228,17,1.4).text(1062,135,ALUMNO,9.5,{a:'c'});
+  D.text(634,166,'FICHA EPIDEMIOLÓGICA EN SALUD ORAL',13,{b:1,a:'c'});
+  if(!dx)D.text(634,180,r.tipo,9.5,{i:1,a:'c'});
+  D.text(134,183,'I.- DATOS PERSONALES:',10,{b:1});
+  // tabla fechas
+  const cx=[1056,1096,1136,1176];
+  D.rect(1056,186,120,15);[1096,1136].forEach(x=>D.line(x,186,x,233));D.text(1076,197,'día',9.5,{i:1,a:'c'}).text(1116,197,'mes',9.5,{i:1,a:'c'}).text(1156,197,'año',9.5,{i:1,a:'c'});
+  D.rect(1056,201,120,16).rect(1056,217,120,16).rect(1056,233,120,15).rect(1056,248,120,16).rect(1056,264,120,16);
+  D.line(1056,233,1176,233,1.6);D.line(1056,280,1176,280,1.6);
+  const dmy=s=>{if(!s)return['','',''];const [y,m,d]=s.split('-');return[d,m,y]};
+  dmy(r.fecha).forEach((v,i)=>D.text(cx[i]+20,213,v,10,{a:'c'}));dmy(r.nac).forEach((v,i)=>D.text(cx[i]+20,229,v,10,{a:'c'}));
+  D.text(1116,245,r.edadYMD||ageYMD(r.nac,r.fecha)||(r.edad?r.edad+' años':''),9.5,{a:'c'});
+  D.text(1116,260,r.dni||'',10,{a:'c'}).text(1116,276,r.sis||'',10,{a:'c'});
+  D.text(857,213,'Fecha de examen (A):',10).text(857,229,'Fecha de nacimiento (B):',10).text(857,245,'Edad en años cumplidos (A - B):',10).text(866,260,'DNI',10).text(866,276,'SIS',10);
+  D.text(134,213,'Apellidos y Nombres:',10).line(240,215,609,215,0.6).text(246,212,r.nombre,10.5,{b:1});
+  D.text(616,213,'Género:',10).rect(694,201,40,16).rect(774,201,40,16).text(714,213,'M',10,{a:'c'}).text(794,213,'F',10,{a:'c'});
+  if(r.sexo==='Masculino')D.ell(714,209,23,11,1.4);if(r.sexo==='Femenino')D.ell(794,209,23,11,1.4);
+  D.text(134,229,'Dirección:',10).line(184,231,609,231,0.6).text(188,228,r.dir||'',10);
+  const gm=(r.grado||'').match(/^(\d+º)\s*(\S+)$/);
+  D.text(134,245,'Colegio:',10).line(178,247,474,247,0.6).text(182,244,r.colegio||'',10);
+  D.text(496,245,'Grado:',10).line(532,247,592,247,0.6).text(562,244,gm?gm[1]:(r.grado||''),10,{a:'c'});
+  D.text(616,245,'Sección:',10).line(662,247,727,247,0.6).text(694,244,gm?gm[2]:'',10,{a:'c'});
+  D.text(134,276,'II.- EXAMEN ESTOMATOLÓGICO:',10,{b:1}).text(134+tw('II.- EXAMEN ESTOMATOLÓGICO: ',10,1),276,'(regístrese únicamente lo anormal)',10);
+  const ES=[['ATM',134,305],['Ganglios',134,321],['Queilitis',496,305],['Lengua',496,321],['Aftas',857,305],['Otros',857,321]];
+  ES.forEach(([k,x,y])=>{const off=x===134?99:x===496?98:99;const e=(r.est||{})[k];const no=x+off,si=no+40;
+    D.text(x,y+3,k+':',10);
+    const sel=dx&&e?e.v:null;
+    D.ell(no,y-1,15,7,sel==='NO'?1.8:0.7,sel==='NO'?'#d9d9d9':null).ell(si,y-1,15,7,sel==='SI'?1.8:0.7,sel==='SI'?'#d9d9d9':null);
+    D.text(no,y+3,'NO',9.5,{i:1,a:'c',b:sel==='NO'}).text(si,y+3,'SI',9.5,{i:1,a:'c',b:sel==='SI'});
+    D.line(si+26,y+6,si+173,y+6,0.6);if(sel==='SI'&&e.d)D.text(si+28,y+3,e.d.length>34?e.d.slice(0,33)+'…':e.d,8.5);
+  });
+  // III IHO
+  D.text(214,355,'III.- ÍNDICE DE HIGIENE ORAL SIMPLIFICADO:',10,{b:1}).text(214+tw('III.- ÍNDICE DE HIGIENE ORAL SIMPLIFICADO: ',10,1),355,'(encierre en un círculo la pieza examinada)',10);
+  const pairs=[[16,17],[11,21],[26,27],[36,37],[31,41],[46,47]];
+  const I=ihoInfo(r);
+  pairs.forEach((pr,i)=>{const c=272+i*40;const u=r.ihoNA?null:sextTooth(r,i);
+    D.text(c-9,386,String(pr[0]),9.5,{i:1,a:'c'}).text(c,386,'/',9.5,{i:1,a:'c'}).text(c+9,386,String(pr[1]),9.5,{i:1,a:'c'});
+    if(u===pr[0])D.ell(c-9,382,9,7,1);else if(u===pr[1])D.ell(c+9,382,9,7,1);else if(u)D.text(c,372,'('+u+')',9,{a:'c',b:1});
+    const fv=v=>v==null?'':v==='x'?'NR':String(v);
+    D.text(c,402,r.ihoNA?'—':fv((r.iho||[])[i]),10,{a:'c'}).text(c,418,r.ihoNA?'—':fv((r.ipc||[])[i]),10,{a:'c'});
+  });
+  D.rect(252,390,240,32);for(let i=1;i<6;i++)D.line(252+i*40,390,252+i*40,422);D.line(252,406,492,406);
+  D.text(242,402,'IPB',10,{i:1,a:'r'}).text(242,418,'IPC',10,{i:1,a:'r'});
+  const f2=x=>x==null?'':(Math.round(x*100)/100).toFixed(2).replace('.',',');
+  D.text(568,402,'IPB =',10,{a:'r'}).rect(574,390,40,16).text(594,402,f2(I.ipb),10,{a:'c'});
+  D.text(568,418,'IPC =',10,{a:'r'}).rect(574,406,40,16).text(594,418,f2(I.ipc),10,{a:'c'});
+  D.text(688,410,'IHO =',10,{a:'r'}).rect(694,390,40,32).text(714,410,r.ihoNA?'N/A':f2(I.full?I.iho:null),10,{a:'c',b:1});
+  D.text(835,402,'Condición IHO:',10,{i:1,a:'c'});
+  [['B','Bueno'],['R','Regular'],['M','Malo']].forEach(([l,w],i)=>{const x=774+i*40;D.rect(x,406,40,16).text(x+20,418,l,10,{a:'c'});if(I.full&&I.cls===w)D.ell(x+20,414,17,10,1.4)});
+  D.text(977,386,'Bueno:',10).text(1053,386,'0.0 - 1.2',10).text(977,402,'Regular:',10).text(1053,402,'1.3 - 3.0',10).text(977,418,'Malo:',10).text(1053,418,'3.1 - 6.0',10);
+  if(I.ipb!=null&&!I.full)D.text(252,437,'Solo se registró placa: IPB = '+f2(I.ipb)+' ('+I.cls+').',8.5,{i:1});
+  // IV caries
+  { const t1='IV.- REGISTRO DE CARIES DENTAL: ',t2='(Encierre en un circulo la pieza examinada)';const W=tw(t1,10,1)+tw(t2,10);const x0=655-W/2;D.text(x0,465,t1,10,{b:1}).text(x0+tw(t1,10,1),465,t2,10)}
+  const R=calc(r),Pp=R.p,Dd=R.d,showP=dx&&r.dent!=='D',showD=dx&&r.dent!=='P';
+  const grid=(y0,perm,dec,rowsL,upper)=>{
+    const X=i=>332+i*40.25,cw=40.25;
+    for(let i=0;i<16;i++){
+      const pn=perm[i],dn=dec[i];
+      D.rect(X(i),y0,cw,31);D.text(X(i)+3,y0+11,String(pn),9.5);if(dn)D.text(X(i)+cw-3,y0+27,String(dn),9.5,{a:'r'});
+      // pieza a usar
+      const tp=r.pos[pn],td=dn?r.pos[dn]:null;
+      const visP=visible(r.dent,pn),visD=dn&&visible(r.dent,dn);
+      const presP=dx&&visP&&tp&&!ABS(tp),presD=dx&&visD&&td&&!ABS(td);
+      let n=null,t=null;
+      if(presP){n=pn;t=tp}else if(presD){n=dn;t=td}
+      if(n===pn)D.ell(X(i)+9,y0+7,9,7,1);else if(n===dn)D.ell(X(i)+cw-10,y0+23,9,7,1);
+      D.rect(X(i),y0+31,cw,16);
+      let pz='';
+      if(t){if(t.m)pz=t.m;else{const v=faces(PP(n)).map(f=>t.s[f]);pz=v.includes('1')?'1':v.includes('2')?'2':v.includes('3')?'3':v.includes('6')?'6':'0'}if(t.f)pz+=(pz?'·':'')+t.f}
+      else if(dx&&visP&&tp&&tp.m==='8')pz='8';
+      D.text(X(i)+cw/2,y0+43,pz,9.5,{a:'c',b:1,col:codeCol(t&&t.m?t.m:pz)});
+      const post_=PP(pn)>=4;
+      rowsL.forEach((f,j)=>{const y=y0+62+j*16;if(f==='O'&&!post_)return;D.rect(X(i),y,cw,16);if(t&&!t.m){const fk=f==='P'?'L':f;if(fk==='O'&&!post(PP(n)))return;const v=t.s[fk];D.text(X(i)+cw/2,y+12,v,9.5,{a:'c',col:codeCol(v)})}});
+    }
+    D.text(329,y0+43,'Pieza',10,{a:'r'}).text(979,y0+43,'Pieza',10);
+    rowsL.forEach((f,j)=>{const y=y0+62+j*16+12;D.text(312,y,f,10,{a:'c'}).text(1000,y,f,10,{a:'c'})});
+  };
+  const LR=(x,y,lab,val,box)=>{D.text(x,y,lab,10);if(box){D.rect(box,y-12,40,16);D.text(box+20,y,val,10,{a:'c',b:1})}else D.text(x+tw(lab+' ',10),y,val,10,{b:1})};
+  const v=(on,x)=>on?String(x):'';
+  grid(470,PU,[,,,55,54,53,52,51,61,62,63,64,65,,,].concat([]),['O','P','D','V','M'],true);
+  D.text(134,497,'Diente:',10).text(1058,497,'Diente:',10);
+  LR(134,528,'NDPP =',v(showP,Pp.pres));LR(134,544,'NPPS =',v(showP,Pp.san));LR(134,560,'DC =',v(showP,Pp.C),213);LR(134,576,'DP =',v(showP,Pp.P),213);LR(134,592,'DO =',v(showP,Pp.O),213);LR(134,608,'CPOD =',v(showP,Pp.C+Pp.P+Pp.O),213);
+  LR(1060,528,'nddp =',v(showD,Dd.pres));LR(1060,544,'ndds =',v(showD,Dd.san));LR(1060,560,'dc =',v(showD,Dd.C),1136);LR(1060,576,'de =',v(showD,Dd.P),1136);LR(1060,592,'do =',v(showD,Dd.O),1136);LR(1060,608,'ceod =',v(showD,Dd.C+Dd.P+Dd.O),1136);
+  grid(627,PL,[,,,85,84,83,82,81,71,72,73,74,75,,,],['O','L','D','V','M'],false);
+  D.text(134,654,'Superficie:',10).text(1058,654,'Superficie:',10);
+  LR(134,685,'NSPP =',v(showP,Pp.sp));LR(134,701,'NSPS =',v(showP,Pp.ss));LR(134,717,'SC =',v(showP,Pp.CS),213);LR(134,733,'SP =',v(showP,Pp.PS),213);LR(134,749,'SO =',v(showP,Pp.OS),213);LR(134,765,'CPOS =',v(showP,Pp.CS+Pp.PS+Pp.OS),213);
+  LR(1060,685,'nsdp =',v(showD,Dd.sp));LR(1060,701,'nsds =',v(showD,Dd.ss));LR(1060,717,'sc =',v(showD,Dd.CS),1136);LR(1060,733,'se =',v(showD,Dd.PS),1136);LR(1060,749,'so =',v(showD,Dd.OS),1136);LR(1060,765,'ceos =',v(showD,Dd.CS+Dd.PS+Dd.OS),1136);
+  if(showP)D.text(134,785,'NSPSS = '+Pp.sell+'     NSPSRS = '+Pp.sellR,9,{i:1});
+  // observaciones
+  D.text(134,800,'Observaciones:',10).line(212,802,1126,802,0.6).line(134,818,1126,818,0.6).line(134,834,1126,834,0.6);
+  const words=(r.obs||'').replace(/\s+/g,' ').trim().split(' ');const ls=['','',''];let li=0;const maxW=[905,985,985];
+  for(const w of words){if(!w)continue;const t=ls[li]?ls[li]+' '+w:w;if(tw(t,9.5)>maxW[li]){if(li<2){li++;ls[li]=w}else{ls[li]+='…';break}}else ls[li]=t}
+  D.text(216,799,ls[0],9.5).text(136,815,ls[1],9.5).text(136,831,ls[2],9.5);
+  /* página 2 */
+  D.page(905,1280);
+  D.text(289,100,'LEYENDA',10.5,{b:1,a:'c'}).text(671,100,'DIAGNOSTICO DE CARIES',11.5,{b:1,a:'c'});
+  const lg=[[128,'NDPP = Número de dientes permanentes presentes'],[147,'NDPS = Número de dientes permanentes sanos'],[185,'NSPP = Número de superficies permanentes presentes'],[204,'NSPS = Número de superficies permanentes sanas'],[241,'nddp = Número de dientes deciduos presentes'],[260,'ndds = Número de dientes deciduos sanos'],[298,'nsdp = Número de superficies deciduas presentes'],[317,'nsds = Número de superficies deciduas sanas'],[355,'NSPSS = Número de superficies permanentes sanas para sellantes'],[374,'NSPSRS = Número de superficies permanentes sanas que recibieron sellantes']];
+  lg.forEach(([y,t])=>D.text(139,y,t,8.5));
+  ['0 = Pieza o Superficie sana','1 = Pieza o Superficie con caries dental evidente (cavidad)','2 = Pieza o Superficie obturada con caries dental','3 = Pieza o Superficie con obturación o corona en buen estado','4 = Pieza perdida por caries dental','5 = Pieza perdida por otras razones','6 = Pieza con sellante de fosas y fisuras en buen estado','7 = Pieza empleada como pilar de puente','8 = Pieza permanente no erupcionada','9 = No registrable','10 = Traumatismo','11 = Hipoplasia'].forEach((t,i)=>D.text(439,128+i*19,t,8.5));
+  D.text(419,397,'HOJA DE EVOLUCIÓN',12,{b:1,a:'c'});
+  D.text(157,428,'Nombre,-',11.5).line(244,438,700,438,1.6).text(250,433,r.nombre,11);
+  D.text(157,458,'Colegio,-',11.5).line(244,468,700,468,1.6).text(250,463,r.colegio||'',11);
+  const tb=(y0,cols,heads,nrows)=>{const xs=cols;D.rect(xs[0],y0,xs[xs.length-1]-xs[0],30*(nrows+1),1.2);for(let i=1;i<xs.length-1;i++)D.line(xs[i],y0,xs[i],y0+30*(nrows+1),1.2);for(let j=1;j<=nrows;j++)D.line(xs[0],y0+30*j,xs[xs.length-1],y0+30*j,1.2);heads.forEach((h,i)=>D.text((xs[i]+xs[i+1])/2,y0+20,h,11,{a:'c'}))};
+  tb(480,[137,244,544,700],['FECHA','TRATAMIENTO','OBSERVACIONES'],12);
+  D.text(419,893,'SITUACIÓN NUTRICIONAL',10.5,{b:1,a:'c'});
+  tb(898,[137,244,340,437,544,700],['FECHA','EDAD','PESO','TALLA','RESULTADOS'],9);
+  return D.pages;
+}
+let pdfRec=null;
+function openPDF(r){
+  pdfRec=r;const pages=buildFicha(JSON.parse(JSON.stringify(r)));
+  $('#pvPages').innerHTML=pages.map(p=>'<div class="pvp">'+toSVG(p)+'</div>').join('');
+  $('#pvTitle').textContent='Ficha · '+r.nombre;$('#pv').classList.remove('hide');document.body.style.overflow='hidden';
+  $('#pvDl').classList.toggle('hide',!downloads);$('#pvMsg').classList.add('hide');
+}
+$('#pvClose').onclick=()=>{$('#pv').classList.add('hide');document.body.style.overflow=''};
+$('#pvDl').onclick=async()=>{
+  if(!pdfRec||!downloads)return;const m=$('#pvMsg');
+  try{const bytes=toPDF(buildFicha(JSON.parse(JSON.stringify(pdfRec))));
+    await downloads.save({filename:'Ficha '+pdfRec.nombre.replace(/[\\/:*?"<>|]/g,'')+' '+pdfRec.fecha+'.pdf',data:new Blob([bytes],{type:'application/pdf'})});
+    m.className='msg ok';m.textContent='PDF descargado.';
+  }catch(e){if(e&&e.code==='declined')return;m.className='msg';m.textContent='No se pudo descargar el PDF'+(e&&e.code?' ('+e.code+')':'')+'.'}
+};
+window.__ficha={buildFicha,toPDF,toSVG};
+
+/* ================= v2.1: CAPSO ================= */
+const CAP_TOMAS=['CAPSO 1 (Diagnóstico)','CAPSO 2 (1er control)','CAPSO 3 (2do control)'];
+const C_SABE=['Sabe','No sabe'],C_SINO=['Sí','No'],C_LIK=['De acuerdo','Ni de acuerdo ni en desacuerdo','En desacuerdo'];
+const CAPQ=[
+ {titulo:'I. Conocimientos',desc:'Clasifique cada respuesta como SABE o NO SABE según la clave. No existen medios puntos.',items:[
+  {k:'p5',t:'P1. Menciona 5 alimentos que dañan los dientes',opts:C_SABE,help:'NO SABE si menciona algún alimento que no sea cariogénico, sin importar cuántos mencione.'},
+  {k:'p6',t:'P2. ¿Por qué es importante cepillarse los dientes?',opts:C_SABE,help:'SABE si menciona ambas razones: evitar la caries y evitar la enfermedad de las encías (limpieza o higiene).'},
+  {k:'p7',t:'P3. ¿Qué partes de la boca debe limpiar diariamente?',opts:C_SABE,help:'SABE si menciona las tres partes: dientes, lengua y encía.'},
+  {k:'p8',t:'P4. ¿Cada cuánto tiempo se debe ir al dentista?',opts:C_SABE,help:'SABE si responde cada 6 meses (o dos veces al año).'},
+  {k:'p9',t:'P5. ¿A qué edad se debe ir por primera vez al dentista?',opts:C_SABE,help:'SABE si responde antes del primer año de vida.'},
+  {k:'p10',t:'P6. ¿Sabe qué es el flúor?',opts:C_SINO,help:'Si responde NO, 6.1, 6.2 y 6.3 se marcan solos como «No sabe».'},
+  {k:'p10.1',t:'P6.1. ¿Qué acción tiene el flúor?',opts:C_SABE,help:'SABE si menciona: fortalecer, proteger o prevenir la caries.'},
+  {k:'p10.2',t:'P6.2. ¿Qué alimentos tienen flúor?',opts:C_SABE,help:'SABE si menciona al menos uno: pescado, hojas de té negro o verde, garbanzos. La sal NO cuenta aquí.'},
+  {k:'p10.3',t:'P6.3. ¿En qué otros productos se encuentra el flúor?',opts:C_SABE,help:'SABE si menciona ambos: pasta dental y sal.'}]},
+ {titulo:'II. Prácticas',desc:'Registre la conducta de la persona según la clave.',items:[
+  {k:'p11',t:'P7. Consumo de alimentos azucarados entre comidas (ayer)',opts:['Consume','No consume'],help:'Evalúe lo que consumió fuera de las tres comidas principales.'},
+  {k:'p12',t:'P9. Usa cepillo y pasta dental a la vez para su limpieza bucal',opts:['Usa','No usa']},
+  {k:'p13',t:'P10. ¿Cuántas veces al día se cepilla los dientes?',opts:['0','1','2','3','4 o más'],kind:'num'},
+  {k:'p13.1',t:'P10.1. ¿Se cepilla después de cada comida?',opts:C_SINO},
+  {k:'p13.2',t:'P10.1. ¿Se cepilla antes de dormir?',opts:C_SINO},
+  {k:'p14',t:'P11. ¿Hace cuánto tiempo visitó al dentista?',opts:['Menos de 6 meses','Más de 6 meses']},
+  {k:'p15',t:'P12. Cuando tiene dolor de muela, ¿acude al dentista?',opts:C_SINO,help:'SÍ = busca una solución profesional (va al dentista).'},
+  {k:'p16',t:'P13. ¿Usa remedios o productos caseros para el dolor de muela?',opts:C_SINO},
+  {k:'p16.1',t:'P13.1. ¿Qué remedio o producto casero usa?',type:'text',opt:true},
+  {k:'p17',t:'P14. Consume sal fluorurada',opts:['Consume','No consume'],help:'Revise el paquete: CONSUME si es sal fluorurada (p. ej. EMSAL, QUIMPAC).'},
+  {k:'p18',t:'P16. Elige su pasta dental porque contiene flúor',opts:C_SINO}]},
+ {titulo:'III. Actitudes',desc:'Marque la opinión de la persona. El puntaje (8 a 24) y la clasificación se calculan solos.',items:[
+  {k:'p20',t:'P17. Para evitar la caries dental es importante disminuir el consumo de dulces',opts:C_LIK,dir:1},
+  {k:'p21',t:'P18. El tiempo que dura mi cepillo de dientes depende del número de veces que me cepillo',opts:C_LIK,dir:1},
+  {k:'p24',t:'P19. El cepillo de dientes puede ser compartido por varios miembros de la familia',opts:C_LIK,dir:-1},
+  {k:'p25',t:'P20. Se debe visitar al dentista solamente cuando existe "dolor de muela"',opts:C_LIK,dir:-1},
+  {k:'p26',t:'P21. La elección de una pasta dental depende solamente del precio',opts:C_LIK,dir:-1},
+  {k:'p27',t:'P22. Para comprar una bolsa de sal solo nos fijamos en el precio',opts:C_LIK,dir:-1},
+  {k:'p22',t:'P23. Se deben reemplazar los dulces por frutas en las comidas',opts:C_LIK,dir:1},
+  {k:'p23',t:'P24. Las personas se interesan en su salud cuando visitan al dentista por lo menos una vez al año',opts:C_LIK,dir:1}]}];
+const CQ={};CAPQ.forEach(s=>s.items.forEach(q=>CQ[q.k]=q));
+const CAP_ORDER=['p5','p6','p7','p8','p9','p10','p10.1','p10.2','p10.3','p11','p12','p13','p13.1','p13.2','p14','p15','p16','p16.1','p17','p18','p20','p21','p22','p23','p24','p25','p26','p27'];
+const CAP_ACT=['p20','p21','p22','p23','p24','p25','p26','p27'];
+const CAP_CON=['p5','p6','p7','p8','p9','p10','p10.1','p10.2','p10.3'];
+const CAP_CORTE=18.7;
+function capCode(k,v){const q=CQ[k];if(v==null||v==='')return null;if(q.type==='text')return v;if(q.kind==='num')return parseInt(v,10);
+  if(q.dir===1)return v==='De acuerdo'?3:v==='En desacuerdo'?1:2;if(q.dir===-1)return v==='De acuerdo'?1:v==='En desacuerdo'?3:2;return v===q.opts[0]?0:1}
+function capScores(r){const R=r.resp||{};const act=CAP_ACT.map(k=>capCode(k,R[k]));const suma=act.every(x=>x!=null)?act.reduce((a,b)=>a+b,0):null;
+  const con=CAP_CON.map(k=>capCode(k,R[k]));const conN=con.every(x=>x!=null)?con.filter(x=>x===0).length:null;
+  return{suma,actitud:suma==null?'':(suma>=CAP_CORTE?'Favorable':'Desfavorable'),con:conN}}
+function capNew(){return{id:null,nombre:'',edad:'',sexo:'',grado:'',colegio:'I.E. Dos de Mayo',toma:CAP_TOMAS[0],fecha:today(),resp:{},creado:null}}
+let G=LS.get(LSP+'capdraft',null)||capNew();
+const capPersist=()=>LS.set(LSP+'capdraft',G);
+$('#cGrado').innerHTML='<option value="">—</option>'+GRADOS.map(g=>'<option>'+g+'</option>').join('');
+$('#cToma').innerHTML=CAP_TOMAS.map(t=>'<option>'+t+'</option>').join('');
+let capMissShow=false,capConfirm=null;
+function capFill(){
+  $('#cNom').value=G.nombre;$('#cEdad').value=G.edad;$('#cSexo').value=G.sexo;$('#cGrado').value=G.grado;$('#cCol').value=G.colegio||'';$('#cToma').value=G.toma;$('#cFecha').value=G.fecha;
+  $('#capTitle').textContent=G.id?'Editando CAPSO':'CAPSO · datos de la persona';$('#capSave').textContent=G.id?'Guardar cambios':'Guardar CAPSO';
+  capRender();
+}
+function capMissing(){return CAP_ORDER.filter(k=>!CQ[k].opt&&(G.resp[k]==null||G.resp[k]===''))}
+function capRender(){
+  const box=$('#capQ');box.innerHTML='';const miss=new Set(capMissShow?capMissing():[]);
+  const noF=G.resp['p10']==='No';
+  CAPQ.forEach(sec=>{
+    const c=document.createElement('div');c.className='card';c.innerHTML='<h2>'+sec.titulo+'</h2><div class="muted" style="margin:-4px 0 6px">'+sec.desc+'</div>';
+    sec.items.forEach(q=>{
+      const it=document.createElement('div');it.className='capi'+(miss.has(q.k)?' miss':'');
+      it.innerHTML='<div class="qt">'+esc(q.t)+'</div>'+(q.help?'<div class="qh">'+esc(q.help)+'</div>':'');
+      if(q.type==='text'){const inp=document.createElement('input');inp.value=G.resp[q.k]||'';inp.placeholder='Opcional';inp.oninput=e=>{G.resp[q.k]=e.target.value;capPersist()};it.appendChild(inp)}
+      else{const seg=document.createElement('div');seg.className='segw';
+        const locked=noF&&(q.k==='p10.1'||q.k==='p10.2'||q.k==='p10.3');
+        q.opts.forEach(o=>{const b=document.createElement('button');b.textContent=o;if(G.resp[q.k]===o)b.className='on';b.disabled=locked;
+          b.onclick=()=>{G.resp[q.k]=G.resp[q.k]===o?null:o;if(q.k==='p10'&&G.resp.p10==='No'){['p10.1','p10.2','p10.3'].forEach(k=>G.resp[k]='No sabe')}capPersist();capRender()};seg.appendChild(b)});
+        it.appendChild(seg)}
+      c.appendChild(it);
+    });
+    box.appendChild(c);
+  });
+  const S=capScores(G),nm=capMissing().length,tot=CAP_ORDER.filter(k=>!CQ[k].opt).length;
+  $('#capRes').innerHTML='<div class="kpi"><div><b>'+(tot-nm)+'/'+tot+'</b><span class="muted">respondidas</span></div><div><b>'+(S.con==null?'—':S.con+'/9')+'</b><span class="muted">conocimientos correctos</span></div><div><b>'+(S.suma==null?'—':S.suma)+'</b><span class="muted">puntaje de actitudes (8–24)</span></div><div><b>'+(S.actitud||'—')+'</b><span class="muted">actitud (corte 18,7)</span></div></div>';
+}
+$('#cNom').oninput=e=>{G.nombre=e.target.value;capPersist()};
+$('#cNom').onchange=()=>capPrefill();
+$('#cEdad').oninput=e=>{G.edad=e.target.value;capPersist()};
+$('#cSexo').onchange=e=>{G.sexo=e.target.value;capPersist()};
+$('#cGrado').onchange=e=>{G.grado=e.target.value;capPersist()};
+$('#cCol').oninput=e=>{G.colegio=e.target.value;capPersist()};
+$('#cToma').onchange=e=>{G.toma=e.target.value;capPersist()};
+$('#cFecha').onchange=e=>{G.fecha=e.target.value;capPersist()};
+function capPrefill(){
+  if(G.id)return;const n=norm(G.nombre);if(!n)return;
+  const prev=[...allRecords(),...allCapso()].filter(r=>norm(r.nombre)===n).sort((a,b)=>(b.actualizado||0)-(a.actualizado||0))[0];if(!prev)return;
+  let ch=false;
+  if(!G.edad&&prev.edad){G.edad=String(prev.edad);ch=true}if(!G.sexo&&prev.sexo){G.sexo=prev.sexo;ch=true}if(!G.grado&&prev.grado){G.grado=prev.grado;ch=true}
+  if(ch){capPersist();capFill();const m=$('#capPref');m.textContent='Datos cargados de un registro anterior de '+prev.nombre+'.';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),5000)}
+}
+$('#capNew').onclick=()=>{G=capNew();capMissShow=false;capPersist();capFill();$('#capMsg').classList.add('hide');window.scrollTo(0,0)};
+$('#capSave').onclick=()=>{
+  const m=$('#capMsg');m.className='msg';
+  const errs=[];if(!G.nombre.trim())errs.push('nombre');if(!(+G.edad>0))errs.push('edad');if(!G.sexo)errs.push('sexo');
+  if(errs.length){m.textContent='Falta: '+errs.join(', ')+'.';m.classList.remove('hide');return}
+  const miss=capMissing();const key=norm(G.nombre)+'|'+G.toma+'|'+miss.length;
+  if(miss.length&&capConfirm!==key){capConfirm=key;capMissShow=true;capRender();m.textContent='Faltan '+miss.length+' respuestas (marcadas en naranja). Toca «Guardar» otra vez para guardarlo incompleto.';m.classList.remove('hide');return}
+  if(!G.id&&capConfirm!==key+'dup'){const dup=allCapso().find(r=>norm(r.nombre)===norm(G.nombre)&&r.toma===G.toma);
+    if(dup){capConfirm=key+'dup';m.textContent='Ya hay un '+G.toma+' de '+dup.nombre+' ('+dup.fecha+'). Toca «Guardar» otra vez si es otra persona.';m.classList.remove('hide');return}}
+  const now=Date.now(),id=G.id||('c'+now.toString(36)+Math.random().toString(36).slice(2,7));
+  const rec={_t:'capso',id,nombre:G.nombre.trim(),edad:+G.edad,sexo:G.sexo,grado:G.grado,colegio:G.colegio||'',toma:G.toma,fecha:G.fecha,resp:G.resp,creado:G.creado||now,actualizado:now};
+  pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
+  const nm=rec.nombre;G=capNew();G.grado=rec.grado;G.colegio=rec.colegio;G.toma=rec.toma;G.fecha=rec.fecha;capMissShow=false;capConfirm=null;capPersist();capFill();
+  m.className='msg ok';m.textContent='CAPSO guardado: '+nm+'. Listo para la siguiente persona (se mantienen grado, colegio, toma y fecha).';m.classList.remove('hide');
+  window.scrollTo({top:0,behavior:'smooth'});renderList();flush();
+};
+/* lista CAPSO */
+let lview='o',cdelArm=null;
+document.querySelectorAll('#lsw button').forEach(b=>b.onclick=()=>{lview=b.dataset.v;document.querySelectorAll('#lsw button').forEach(x=>x.classList.toggle('on',x===b));renderList()});
+function renderCapList(){
+  const all=allCapso().sort((a,b)=>(b.actualizado||0)-(a.actualizado||0));
+  $('#nC').textContent=all.length;
+  const q=norm($('#q').value);const box=$('#clist');box.innerHTML='';
+  const shown=all.filter(r=>!q||norm(r.nombre+' '+(r.grado||'')+' '+r.toma).includes(q));
+  if(!shown.length){box.innerHTML='<p class="muted">'+(all.length?'Sin resultados.':'Aún no hay CAPSO registrados.')+'</p>';return}
+  shown.forEach(r=>{const S=capScores(r);const el=document.createElement('div');el.className='it';
+    el.innerHTML='<div><b>'+esc(r.nombre)+'</b>'+(pending[r.id]?'<span class="badge">sin subir</span>':'')+'<div class="muted">'+esc(r.edad)+' a · '+esc((r.sexo||'').charAt(0))+' · '+esc(r.grado||'—')+' · '+esc(r.toma)+' · '+esc(r.fecha)+'</div><div class="muted">Conocimientos '+(S.con==null?'—':S.con+'/9')+' · Actitud '+(S.suma==null?'—':S.suma+' ('+S.actitud+')')+'</div></div>';
+    const bx=document.createElement('div');bx.className='row';
+    const be=document.createElement('button');be.className='btn sm';be.textContent='Editar';be.onclick=()=>{G=JSON.parse(JSON.stringify(r));delete G._t;capMissShow=false;capPersist();show('C');capFill();window.scrollTo(0,0)};
+    const bd=document.createElement('button');bd.className='btn sm danger';bd.textContent=cdelArm===r.id?'¿Eliminar? Toca otra vez':'Eliminar';
+    bd.onclick=()=>{if(cdelArm!==r.id){cdelArm=r.id;renderList();setTimeout(()=>{if(cdelArm===r.id){cdelArm=null;renderList()}},4000);return}
+      cdelArm=null;if(pending[r.id]){delete pending[r.id];LS.set(LSP+'pending',pending)}if(capRemote[r.id]){dels.push('capso:'+r.id);LS.set(LSP+'del',dels)}renderList();flush()};
+    bx.append(be,bd);el.appendChild(bx);box.appendChild(el)});
+}
+const CAP_HEAD=['Fecha','TOMA CAPSO','NOMBRES Y APELLIDOS','EDAD','sexo','GRADO Y SECCIÓN','COLEGIO / GRUPO',...CAP_ORDER,'SUMA','ACTITUD','ACTITUD (texto)','CONOCIMIENTOS CORRECTOS (0-9)'];
+function capRow(r){const S=capScores(r);return[r.fecha,r.toma,r.nombre,r.edad,r.sexo==='Femenino'?0:r.sexo==='Masculino'?1:'',r.grado||'',r.colegio||'',...CAP_ORDER.map(k=>{const v=capCode(k,(r.resp||{})[k]);return v==null?'':v}),S.suma==null?'':S.suma,S.suma==null?'':(S.suma>=CAP_CORTE?0:1),S.actitud,S.con==null?'':S.con]}
+function capRows(){return allCapso().sort((a,b)=>(a.creado||0)-(b.creado||0)).map(capRow)}
+window.__capRefresh=()=>{renderList();if(!$('#vRes').classList.contains('hide'))renderRes()};
+
+/* ================= v2.1: estadística ================= */
+function st(a){a=a.filter(x=>typeof x==='number'&&!isNaN(x));const n=a.length;if(!n)return{n:0,m:null,sd:null};const m=a.reduce((x,y)=>x+y,0)/n;const sd=n>1?Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/(n-1)):null;return{n,m,sd}}
+function betacf(a,b,x){const MAXIT=200,EPS=3e-12,FPMIN=1e-300;let qab=a+b,qap=a+1,qam=a-1,c=1,d=1-qab*x/qap;if(Math.abs(d)<FPMIN)d=FPMIN;d=1/d;let h=d;
+  for(let m=1;m<=MAXIT;m++){const m2=2*m;let aa=m*(b-m)*x/((qam+m2)*(a+m2));d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;d=1/d;h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<EPS)break}return h}
+function gammaln(x){const c=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];let y=x,tmp=x+5.5;tmp-=(x+0.5)*Math.log(tmp);let ser=1.000000000190015;for(const v of c)ser+=v/++y;return -tmp+Math.log(2.5066282746310005*ser/x)}
+function ibeta(a,b,x){if(x<=0)return 0;if(x>=1)return 1;const bt=Math.exp(gammaln(a+b)-gammaln(a)-gammaln(b)+a*Math.log(x)+b*Math.log(1-x));return x<(a+1)/(a+b+2)?bt*betacf(a,b,x)/a:1-bt*betacf(b,a,1-x)/b}
+function pairedT(d){const S=st(d);if(S.n<2||!S.sd)return{n:S.n,md:S.m,sd:S.sd,t:null,p:null};const t=S.m/(S.sd/Math.sqrt(S.n)),df=S.n-1;const p=ibeta(df/2,0.5,df/(df+t*t));return{n:S.n,md:S.m,sd:S.sd,t,p}}
+const f2=x=>x==null||isNaN(x)?'—':(Math.round(x*100)/100).toFixed(2).replace('.',',');
+const f1p=x=>x==null||isNaN(x)?'—':(Math.round(x*1000)/10).toFixed(1).replace('.',',')+'%';
+const fp=p=>p==null?'—':p<0.001?'<0,001':(Math.round(p*1000)/1000).toFixed(3).replace('.',',');
+const pkey=r=>(r.dni&&r.dni.length===8)?'dni:'+r.dni:'n:'+norm(r.nombre);
+
+/* ================= v2.1: Resumen ================= */
+const T_IHO=['Diagnóstico','Control 1 (solo IHO)','Control 2 (solo IHO)'];
+let resModel=[];
+function renderRes(){
+  const colSel=$('#rCol'),cur=colSel.value;
+  const cols=[...new Set([...allRecords(),...allCapso()].map(r=>r.colegio||'(sin colegio)'))].sort();
+  colSel.innerHTML='<option value="">Todos</option>'+cols.map(c=>'<option'+(c===cur?' selected':'')+'>'+esc(c)+'</option>').join('');
+  const fcol=r=>!colSel.value||(r.colegio||'(sin colegio)')===colSel.value;
+  const metric=$('#rIho').value;
+  const R=allRecords().filter(fcol).map(r=>fixPos(JSON.parse(JSON.stringify(r))));
+  const C=allCapso().filter(fcol);
+  const M=[];// {title, note, head:[[...]], rows:[[...]], tot?:bool, chart?}
+  const dx=R.filter(r=>r.tipo==='Diagnóstico');
+  const V=dx.map(r=>{const k=calc(r),p=k.p,d=k.d;const P=r.dent!=='D',D=r.dent!=='P';return{r,edad:+r.edad,sexo:r.sexo,grado:r.grado||'—',P,D,
+    C:p.C,Pp:p.P,O:p.O,CPOD:p.C+p.P+p.O,CS:p.CS,PS:p.PS,OS:p.OS,CPOS:p.CS+p.PS+p.OS,SP:p.san,SSP:p.ss,
+    c:d.C,e:d.P,o:d.O,ceod:d.C+d.P+d.O,cs:d.CS,es:d.PS,os:d.OS,ceos:d.CS+d.PS+d.OS,sd:d.san,ssd:d.ss}});
+  // KPIs
+  const exp=V.filter(v=>(v.P?v.CPOD:0)+(v.D?v.ceod:0)>0).length;
+  const vp=V.filter(v=>v.P),vd=V.filter(v=>v.D);
+  const kp={n:V.length,exp,prev:V.length?exp/V.length:null,cpod:st(vp.map(v=>v.CPOD)).m,ceod:st(vd.map(v=>v.ceod)).m};
+  // tablas Anexo 2
+  const ag=a=>a[0]===a[1]?String(a[0]):a[0]+' - '+a[1];
+  const EDc=[[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12]],EDC=EDc.concat([[15,15],[35,44],[65,74]]);
+  const tabla=(title,set,comps,ages)=>{if(!set.length){M.push({title,note:'Sin registros con esta dentición todavía.',head:[['—']],rows:[]});return}const head=[['Edad','N.º examinados',...comps.flatMap(c=>[c[1]+' Prom.',c[1]+' D.E.'])]];const rows=[];
+    ages.concat([null]).forEach(a=>{const sub=a?set.filter(v=>v.edad>=a[0]&&v.edad<=a[1]):set;const row=[a?ag(a):'Total',sub.length];comps.forEach(c=>{const s=st(sub.map(v=>v[c[0]]));row.push(s.m,s.sd)});rows.push(row)});
+    M.push({title,head,rows,tot:true,num:true})};
+  tabla('I. Índice ceod en la población (Anexo 2)',vd,[['c','c'],['e','e'],['o','o'],['ceod','ceod'],['sd','Piezas deciduas sanas']],EDc);
+  tabla('I-b. Índice ceos (superficies deciduas)',vd,[['cs','cs'],['es','es'],['os','os'],['ceos','ceos'],['ssd','Superficies deciduas sanas']],EDc);
+  tabla('II. Índice CPOD en la población (Anexo 2)',vp,[['C','C'],['Pp','P'],['O','O'],['CPOD','CPOD'],['SP','Piezas permanentes sanas']],EDC);
+  tabla('II-b. Índice CPOS (superficies permanentes)',vp,[['CS','CS'],['PS','PS'],['OS','OS'],['CPOS','CPOS'],['SSP','Superficies permanentes sanas']],EDC);
+  const ages=[...new Set(vp.map(v=>v.edad))].sort((a,b)=>a-b);
+  tabla('II-c. CPOD por cada edad registrada',vp,[['C','C'],['Pp','P'],['O','O'],['CPOD','CPOD'],['CPOS','CPOS']],ages.map(a=>[a,a]));
+  // por sexo y grado
+  const grp=(title,key,set,keys)=>{const head=[[title.split(' por ')[1]||'Grupo','N.º','CPOD Prom.','CPOD D.E.','CPOS Prom.','Con experiencia de caries','%']];const rows=[];
+    keys.concat([null]).forEach(k=>{const sub=k==null?set:set.filter(v=>v[key]===k);const e=sub.filter(v=>v.CPOD>0).length;const a=st(sub.map(v=>v.CPOD)),b=st(sub.map(v=>v.CPOS));rows.push([k==null?'Total':k,sub.length,a.m,a.sd,b.m,e,sub.length?e/sub.length:null])});
+    M.push({title,head,rows,tot:true,num:true,pct:[6]})};
+  grp('CPOD por sexo','sexo',vp,['Femenino','Masculino']);
+  grp('CPOD por grado (referencial)','grado',vp,[...new Set(vp.map(v=>v.grado))].sort());
+  // prevalencia
+  const sumk=(set,k)=>set.reduce((a,v)=>a+(v[k]||0),0);
+  const totC=sumk(vp,'C'),totCPOD=sumk(vp,'CPOD');
+  M.push({title:'Prevalencia de caries y composición del CPOD',head:[['Indicador','Valor']],rows:[
+    ['Examinados (diagnóstico)',V.length],['Con experiencia de caries (CPOD o ceod > 0)',exp],['Prevalencia de experiencia de caries',kp.prev],['Libres de caries (CPOD y ceod = 0)',V.length-exp],
+    ['% del CPOD que es caries activa (C)',totCPOD?totC/totCPOD:null],['% del CPOD que son piezas perdidas (P)',totCPOD?sumk(vp,'Pp')/totCPOD:null],['% del CPOD que son obturadas (O)',totCPOD?sumk(vp,'O')/totCPOD:null],
+    ['Superficies permanentes sanas para sellantes (NSPSS)',dx.reduce((a,r)=>a+calc(r).p.sell,0)]],pctRows:[2,4,5,6],num:true});
+  // IHO
+  const ihoVal=r=>{const I=ihoInfo(r);if(I.na)return null;return metric==='ipb'?I.ipb:(I.full?I.iho:null)};
+  const ihoCls=x=>x==null?null:metric==='ipb'?(x<=0.6?'Bueno':x<=1.8?'Regular':'Malo'):(x<=1.2?'Bueno':x<=3?'Regular':'Malo');
+  const byT=T_IHO.map(t=>R.filter(r=>r.tipo===t));
+  const ML=metric==='ipb'?'IPB':'IHO-S';
+  const ihoAges=[...new Set(R.map(r=>+r.edad))].sort((a,b)=>a-b);
+  {const head=[['Edad','N.º (diagnóstico)',ML+' diagnóstico',ML+' 1er control',ML+' 2do control']];const rows=[];
+   ihoAges.concat([null]).forEach(a=>{const f=r=>a==null||+r.edad===a;rows.push([a==null?'Total':String(a),byT[0].filter(f).filter(r=>ihoVal(r)!=null).length,...byT.map(s=>st(s.filter(f).map(ihoVal)).m)])});
+   M.push({title:'III. Variación del índice de higiene oral ('+ML+') por edad',head,rows,tot:true,num:true})}
+  {const head=[['Condición',...T_IHO.flatMap(t=>[t.replace(' (solo IHO)','')+' n','%'])]];const rows=[];
+   ['Bueno','Regular','Malo'].forEach(c=>{const row=[c];byT.forEach(s=>{const vals=s.map(ihoVal).filter(x=>x!=null);const n=vals.filter(x=>ihoCls(x)===c).length;row.push(n,vals.length?n/vals.length:null)});rows.push(row)});
+   const tr=['Total'];byT.forEach(s=>{const n=s.map(ihoVal).filter(x=>x!=null).length;tr.push(n,n?1:null)});rows.push(tr);
+   M.push({title:'Condición de higiene oral ('+ML+') por toma',note:metric==='ipb'?'Escala de placa (0–3): bueno 0–0,6 · regular 0,7–1,8 · malo 1,9–3.':'Escala IHO-S (0–6): bueno 0–1,2 · regular 1,3–3,0 · malo 3,1–6,0.',head,rows,tot:true,pct:[2,4,6]})}
+  // pareado IHO
+  const idx={};R.forEach(r=>{const k=pkey(r);(idx[k]=idx[k]||{})[r.tipo]=r;if(!idx[k].nombre)idx[k].nombre=r.nombre;idx[k].grado=r.grado});
+  const pares=Object.values(idx).filter(p=>p['Diagnóstico']);
+  const pr=(t)=>{const d=[],a=[],b=[];pares.forEach(p=>{const x=p['Diagnóstico']&&ihoVal(p['Diagnóstico']),y=p[t]&&ihoVal(p[t]);if(x!=null&&y!=null){a.push(x);b.push(y);d.push(y-x)}});const T=pairedT(d);return[t.replace(' (solo IHO)',''),T.n,st(a).m,st(b).m,T.md,T.sd,T.t,T.p,d.length?d.filter(x=>x<0).length/d.length:null]};
+  M.push({title:'Antes vs después: '+ML+' pareado (diagnóstico vs controles)',note:'Diferencia = control − diagnóstico (negativa = mejoró la higiene). Prueba t de Student para muestras relacionadas, dos colas.',
+    head:[['Comparación con el diagnóstico','Pares','Prom. diagnóstico','Prom. control','Diferencia media','D.E. diferencia','t','p','% que mejoró']],rows:[pr(T_IHO[1]),pr(T_IHO[2])],num:true,pct:[8],pcol:7});
+  {const rows=[];pares.forEach(p=>{const v=T_IHO.map(t=>p[t]?ihoVal(p[t]):null);const last=v[2]!=null?v[2]:v[1];if(v[0]==null)return;
+     const ev=last==null?'Sin controles':last<v[0]?'Mejoró':last>v[0]?'Empeoró':'Sin cambio';rows.push([p.nombre,p.grado||'—',...v,last==null?null:last-v[0],ev])});
+   rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+   const cnt=e=>rows.filter(r=>r[6]===e).length;
+   M.push({title:'Evolución del '+ML+' por alumno',note:'Mejoró: '+cnt('Mejoró')+' · Sin cambio: '+cnt('Sin cambio')+' · Empeoró: '+cnt('Empeoró')+' · Sin controles: '+cnt('Sin controles'),
+     head:[['Nombre','Grado','Diagnóstico','1er control','2do control','Cambio (último − dx)','Evolución']],rows,num:true,collapse:true})}
+  // CAPSO
+  const capT=CAP_TOMAS.map(t=>C.filter(r=>r.toma===t));
+  if(C.length){
+    const head=[['Indicador','Categoría reportada',...CAP_TOMAS.flatMap(t=>[t.split(' (')[0]+' n','%']),'Cambio 2 vs 1']];const rows=[];
+    rows.push(['Total encuestados','',...capT.flatMap(s=>[s.length,null]),null]);
+    const cnt=(set,k,val)=>set.filter(r=>capCode(k,(r.resp||{})[k])===val).length;
+    const ans=(set,k)=>set.filter(r=>capCode(k,(r.resp||{})[k])!=null).length;
+    CAPQ.forEach(sec=>{rows.push({sec:sec.titulo.toUpperCase()});
+      sec.items.forEach(q=>{if(q.type==='text')return;
+        if(q.kind==='num'){[0,1,2,3,4].forEach(v=>{const r=[q.t,v===4?'4 o más veces':v+(v===1?' vez':' veces')];const ps=[];capT.forEach(s=>{const n=cnt(s,q.k,v),a=ans(s,q.k);r.push(n,a?n/a:null);ps.push(a?n/a:null)});r.push(ps[1]!=null&&ps[0]!=null?ps[1]-ps[0]:null);rows.push(r)})}
+        else if(q.dir){const r=[q.t,'Puntaje promedio (1 a 3)'];const ms=[];capT.forEach(s=>{const m=st(s.map(x=>capCode(q.k,(x.resp||{})[q.k]))).m;r.push(m,null);ms.push(m)});r.push(ms[1]!=null&&ms[0]!=null?ms[1]-ms[0]:null);r._avg=true;rows.push(r)}
+        else{const r=[q.t,q.opts[0]];const ps=[];capT.forEach(s=>{const n=cnt(s,q.k,0),a=ans(s,q.k);r.push(n,a?n/a:null);ps.push(a?n/a:null)});r.push(ps[1]!=null&&ps[0]!=null?ps[1]-ps[0]:null);rows.push(r)}})});
+    rows.push({sec:'ACTITUD Y CONOCIMIENTO GLOBAL'});
+    {const r=['Puntaje total de actitudes','Promedio (8 a 24)'];const ms=[];capT.forEach(s=>{const m=st(s.map(x=>capScores(x).suma)).m;r.push(m,null);ms.push(m)});r.push(ms[1]!=null&&ms[0]!=null?ms[1]-ms[0]:null);r._avg=true;rows.push(r)}
+    ['Favorable','Desfavorable'].forEach(c=>{const r=['Clasificación de la actitud',c==='Favorable'?'Favorable (18,7 a 24)':'Desfavorable (8 a 18,6)'];const ps=[];capT.forEach(s=>{const v=s.map(x=>capScores(x)).filter(x=>x.suma!=null);const n=v.filter(x=>x.actitud===c).length;r.push(n,v.length?n/v.length:null);ps.push(v.length?n/v.length:null)});r.push(ps[1]!=null&&ps[0]!=null?ps[1]-ps[0]:null);rows.push(r)});
+    {const r=['Conocimientos correctos','Promedio (0 a 9)'];const ms=[];capT.forEach(s=>{const m=st(s.map(x=>capScores(x).con)).m;r.push(m,null);ms.push(m)});r.push(ms[1]!=null&&ms[0]!=null?ms[1]-ms[0]:null);r._avg=true;rows.push(r)}
+    M.push({title:'IV. Resumen CAPSO por toma',note:'% sobre quienes respondieron cada pregunta en esa toma. Cambio = % CAPSO 2 − % CAPSO 1 (en puntos porcentuales; en promedios, diferencia de promedios).',head,rows,capso:true});
+    // pareado CAPSO
+    const ci={};C.forEach(r=>{const k='n:'+norm(r.nombre);(ci[k]=ci[k]||{})[r.toma]=r});
+    const cp=(t,f,lab)=>{const d=[],a=[],b=[];Object.values(ci).forEach(p=>{const x=p[CAP_TOMAS[0]]&&f(p[CAP_TOMAS[0]]),y=p[t]&&f(p[t]);if(x!=null&&y!=null){a.push(x);b.push(y);d.push(y-x)}});const T=pairedT(d);return[lab+' · '+t.split(' (')[0]+' vs CAPSO 1',T.n,st(a).m,st(b).m,T.md,T.sd,T.t,T.p,d.length?d.filter(x=>x>0).length/d.length:null]};
+    M.push({title:'Antes vs después: CAPSO pareado',note:'Diferencia = toma de control − CAPSO 1 (positiva = mejoró). Prueba t de Student para muestras relacionadas, dos colas.',
+      head:[['Comparación','Pares','Prom. CAPSO 1','Prom. control','Diferencia media','D.E. diferencia','t','p','% que mejoró']],
+      rows:[cp(CAP_TOMAS[1],x=>capScores(x).con,'Conocimientos (0–9)'),cp(CAP_TOMAS[2],x=>capScores(x).con,'Conocimientos (0–9)'),cp(CAP_TOMAS[1],x=>capScores(x).suma,'Actitudes (8–24)'),cp(CAP_TOMAS[2],x=>capScores(x).suma,'Actitudes (8–24)')],num:true,pct:[8],pcol:7});
+  }
+  resModel=M;
+  // ----- render -----
+  const body=$('#resBody');let h='';
+  h+='<div class="card"><div class="kpi"><div><b>'+kp.n+'</b><span class="muted">diagnósticos</span></div><div><b>'+f2(kp.cpod)+'</b><span class="muted">CPOD promedio</span></div><div><b>'+f2(kp.ceod)+'</b><span class="muted">ceod promedio</span></div><div><b>'+f1p(kp.prev)+'</b><span class="muted">con experiencia de caries</span></div><div><b>'+C.length+'</b><span class="muted">CAPSO registrados</span></div></div></div>';
+  // gráficos
+  const ch=[];
+  if(vp.length)ch.push(barChart('Composición del CPOD (promedio)',[{lab:'C',v:st(vp.map(v=>v.C)).m,c:'var(--c1)'},{lab:'P',v:st(vp.map(v=>v.Pp)).m,c:'#8b919a'},{lab:'O',v:st(vp.map(v=>v.O)).m,c:'var(--c3)'},{lab:'CPOD',v:st(vp.map(v=>v.CPOD)).m,c:'var(--ac)'}]));
+  const im=byT.map(s=>st(s.map(ihoVal)).m);if(im.some(x=>x!=null))ch.push(barChart(ML+' promedio por toma (menor es mejor)',T_IHO.map((t,i)=>({lab:['Dx','Control 1','Control 2'][i],v:im[i],c:['#8b919a','var(--c3)','var(--c6)'][i]}))));
+  if(C.length){const ks=CAP_CON;ch.push(groupChart('CAPSO: % que sabe por pregunta (conocimientos)',ks.map(k=>k.replace('p10.','6.').replace('p10','6').replace(/^p(\d+)$/,(m,n)=>'P'+({5:1,6:2,7:3,8:4,9:5}[n]||n))),capT.slice(0,2).map((s,i)=>({lab:i?'CAPSO 2':'CAPSO 1',c:i?'var(--c6)':'#8b919a',vals:ks.map(k=>{const a=s.filter(r=>capCode(k,(r.resp||{})[k])!=null);return a.length?a.filter(r=>capCode(k,r.resp[k])===0).length/a.length:null})}))))}
+  if(ch.length)h+='<div class="card"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">'+ch.join('')+'</div></div>';
+  M.forEach(t=>{h+='<div class="card">'+(t.collapse?'<details><summary>'+esc(t.title)+'</summary><div style="padding:0 10px 10px">':'<div class="rh">'+esc(t.title)+'</div>')+(t.note?'<div class="muted" style="margin-bottom:6px">'+esc(t.note)+'</div>':'')+'<div class="tw">'+tableHTML(t)+'</div>'+(t.collapse?'</div></details>':'')+'</div>'});
+  if(!dx.length&&!C.length)h+='<div class="card muted">Aún no hay datos para resumir.</div>';
+  body.innerHTML=h;
+}
+function cellFmt(t,v,ci,row){if(v==null||v==='')return v===0?'0':(v==null?'—':'');if(typeof v!=='number')return esc(v);
+  if(t.pcol===ci)return fp(v);if((t.pct&&t.pct.includes(ci))||(t.pctRows&&t.pctRows.includes(row)&&ci===1))return f1p(v);
+  if(t.capso){if(row._avg)return f2(v);if(ci===8)return v==null?'—':((v>0?'+':'')+(Math.round(v*1000)/10).toFixed(1).replace('.',',')+' pp');return ci%2===1&&ci>=3?f1p(v):String(v)}
+  return Number.isInteger(v)?String(v):f2(v)}
+function tableHTML(t){let h='<table class="rt"><thead>'+t.head.map(r=>'<tr>'+r.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr>').join('')+'</thead><tbody>';
+  t.rows.forEach((r,ri)=>{if(r.sec){h+='<tr><td colspan="'+t.head[0].length+'" style="font-weight:700;background:var(--bg)">'+esc(r.sec)+'</td></tr>';return}
+    const tot=t.tot&&String(r[0])==='Total';h+='<tr'+(tot?' class="tot"':'')+'>'+r.map((v,ci)=>'<td>'+cellFmt(t,v,ci,t.pctRows?ri:r)+'</td>').join('')+'</tr>'});
+  return h+'</tbody></table>'}
+function barChart(title,items){const W=300,H=170,max=Math.max(0.5,...items.map(i=>i.v||0))*1.15,bw=W/items.length;
+  let s='<div><div style="font-size:13px;font-weight:600;margin-bottom:4px">'+esc(title)+'</div><svg viewBox="0 0 '+W+' '+(H+30)+'" width="100%" role="img" aria-label="'+esc(title)+'">';
+  items.forEach((it,i)=>{const v=it.v||0,h=v/max*H,x=i*bw+bw*0.2,w=bw*0.6;s+='<rect x="'+x+'" y="'+(H-h)+'" width="'+w+'" height="'+h+'" rx="3" fill="'+it.c+'"/><text x="'+(x+w/2)+'" y="'+(H-h-4)+'" text-anchor="middle" font-size="12" fill="var(--tx)">'+(it.v==null?'—':f2(it.v))+'</text><text x="'+(x+w/2)+'" y="'+(H+16)+'" text-anchor="middle" font-size="12" fill="var(--tx2)">'+esc(it.lab)+'</text>'});
+  return s+'<line x1="0" y1="'+H+'" x2="'+W+'" y2="'+H+'" stroke="var(--bd2)"/></svg></div>'}
+function groupChart(title,labels,series){const W=320,H=150,n=labels.length,gw=W/n,bw=gw*0.8/series.length;
+  let s='<div><div style="font-size:13px;font-weight:600;margin-bottom:4px">'+esc(title)+'</div><svg viewBox="0 0 '+W+' '+(H+34)+'" width="100%" role="img" aria-label="'+esc(title)+'">';
+  labels.forEach((l,i)=>{series.forEach((se,j)=>{const v=se.vals[i];if(v==null)return;const h=v*H,x=i*gw+gw*0.1+j*bw;s+='<rect x="'+x+'" y="'+(H-h)+'" width="'+(bw-1)+'" height="'+h+'" fill="'+se.c+'"><title>'+esc(se.lab+' '+l+': '+f1p(v))+'</title></rect>'});s+='<text x="'+(i*gw+gw/2)+'" y="'+(H+14)+'" text-anchor="middle" font-size="10" fill="var(--tx2)">'+esc(l)+'</text>'});
+  s+='<line x1="0" y1="'+H+'" x2="'+W+'" y2="'+H+'" stroke="var(--bd2)"/>';series.forEach((se,j)=>{s+='<rect x="'+(j*90)+'" y="'+(H+22)+'" width="10" height="10" fill="'+se.c+'"/><text x="'+(j*90+14)+'" y="'+(H+31)+'" font-size="11" fill="var(--tx)">'+esc(se.lab)+'</text>'});
+  return s+'</svg></div>'}
+$('#rCol').onchange=renderRes;$('#rIho').onchange=renderRes;
+$('#rXlsx').onclick=async()=>{const m=$('#rMsg');
+  try{await loadXLSX();const wb=XLSX.utils.book_new();const aoa=[];
+    resModel.forEach(t=>{aoa.push([t.title]);if(t.note)aoa.push([t.note]);t.head.forEach(r=>aoa.push(r));t.rows.forEach(r=>{if(r.sec){aoa.push([r.sec]);return}aoa.push(r.map(v=>typeof v==='number'?Math.round(v*10000)/10000:(v==null?'':v)))});aoa.push([])});
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'Resumen');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([HEAD,...rows()]),'CPOD ceod IHO');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([CAP_HEAD,...capRows()]),'CAPSO codificado');
+    const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    await downloads.save({filename:'Resumen Paccha '+today()+'.xlsx',data:new Blob([out])});m.className='msg ok';m.textContent='Excel del resumen descargado.';m.classList.remove('hide')}
+  catch(e){if(e&&e.code==='declined')return;m.className='msg';m.textContent='No se pudo generar el Excel.';m.classList.remove('hide')}};
+
+/* ---------- pestañas ---------- */
+function show(v){[['N','#vNew','#tabN'],['L','#vList','#tabL'],['C','#vCap','#tabC'],['R','#vRes','#tabR']].forEach(([k,sec,tb])=>{$(sec).classList.toggle('hide',v!==k);$(tb).classList.toggle('on',v===k)});if(v==='L')renderList();if(v==='R')renderRes();window.scrollTo(0,0)}
+$('#tabN').onclick=()=>show('N');$('#tabL').onclick=()=>show('L');$('#tabC').onclick=()=>show('C');$('#tabR').onclick=()=>show('R');
+window.addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(render,150)});
+
+/* ---------- descargas (compartir / guardar en Archivos) ---------- */
+downloads={save:async({filename,data})=>{
+  const ext=filename.split('.').pop().toLowerCase();
+  const type={pdf:'application/pdf',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',json:'application/json',csv:'text/csv'}[ext]||'application/octet-stream';
+  const blob=data instanceof Blob?new Blob([data],{type}):new Blob([data],{type});
+  const file=new File([blob],filename,{type});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:filename});return{status:'saved'}}catch(e){if(e&&e.name==='AbortError')throw{code:'declined'};}
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);return{status:'saved'};
+}};
+$('#bBackup').onclick=async()=>{
+  try{const all=allRecords();await downloads.save({filename:'Respaldo CPOD Paccha '+today()+'.json',data:JSON.stringify({app:'odontograma-paccha',version:'2.0',fecha:new Date().toISOString(),registros:all,capso:allCapso()},null,1)});lmsg('Respaldo listo. Elige «Guardar en Archivos» → iCloud Drive.',true)}
+  catch(e){if(e&&e.code==='declined')return;lmsg('No se pudo crear el respaldo.')}
+};
+
+/* ---------- arranque ---------- */
+buildPal();fillForm();capFill();renderList();updatePill();
+const fbApp=ENV.appName?initializeApp(FIREBASE_CONFIG,ENV.appName):initializeApp(FIREBASE_CONFIG);
+$('#verLbl').textContent='v'+ENV.version+(ENV.label?' '+ENV.label:'');if(ENV.label){document.title+=' ('+ENV.label+')'}
+const auth=getAuth(fbApp);
+const fs=initializeFirestore(fbApp,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
+const fsdb={collection:c=>({doc:id=>({set:d=>setDoc(doc(fs,c,id),JSON.parse(JSON.stringify(d))),delete:()=>deleteDoc(doc(fs,c,id))}),onSnapshot:(n,e)=>onSnapshot(collection(fs,c),{includeMetadataChanges:true},n,e)})};
+let unsub=null,unsubC=null;
+function lgMsg(t,ok){const m=$('#lgMsg');m.className='msg'+(ok?' ok':'');m.textContent=t;m.classList.remove('hide')}
+const ERR={'auth/invalid-credential':'Correo o contraseña incorrectos.','auth/wrong-password':'Contraseña incorrecta.','auth/user-not-found':'No existe esa cuenta; usa «Crear cuenta».','auth/email-already-in-use':'Esa cuenta ya existe; usa «Entrar».','auth/weak-password':'La contraseña debe tener al menos 6 caracteres.','auth/invalid-email':'Correo no válido.','auth/network-request-failed':'Sin conexión: la primera vez necesitas internet para iniciar sesión.','auth/too-many-requests':'Demasiados intentos; espera un momento.'};
+async function doAuth(create){
+  const em=$('#lgEmail').value.trim(),pw=$('#lgPass').value;
+  if(ALLOWED_EMAIL&&em.toLowerCase()!==ALLOWED_EMAIL.toLowerCase()){lgMsg('Este correo no tiene acceso a la app.');return}
+  try{await setPersistence(auth,indexedDBLocalPersistence);create?await createUserWithEmailAndPassword(auth,em,pw):await signInWithEmailAndPassword(auth,em,pw);$('#lgPass').value=''}
+  catch(e){lgMsg(ERR[e&&e.code]||('No se pudo iniciar sesión ('+(e&&e.code||'error')+').'))}
+}
+$('#lgIn').onclick=()=>doAuth(false);$('#lgNew').onclick=()=>doAuth(true);
+$('#lgPass').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth(false)});
+$('#bOut').onclick=async()=>{const n=Object.keys(pending).length+dels.length;if(n){lmsg('Hay '+n+' registro(s) sin subir. Conéctate a internet antes de cerrar sesión.');return}await signOut(auth)};
+onAuthStateChanged(auth,u=>{
+  if(unsub){unsub();unsub=null}if(unsubC){unsubC();unsubC=null}
+  if(!u){db=null;$('#login').classList.remove('hide');$('#lgEmail').value=ALLOWED_EMAIL||'';updatePill();return}
+  $('#login').classList.add('hide');
+  db=fsdb;dbState=navigator.onLine?'connecting':'offline';
+  unsubC=db.collection(COL_C).onSnapshot(snap=>{const m={};snap.docs.forEach(d=>{const v=d.data();if(v)m[d.id]=v});capRemote=m;LS.set(LSP+'capcache',capRemote);updatePill();if(window.__capRefresh)window.__capRefresh()},err=>{});
+  unsub=db.collection(COL_R).onSnapshot(snap=>{
+    const m={};snap.docs.forEach(d=>{const v=d.data();if(v)m[d.id]=v});
+    remote=m;LS.set(LSP+'cache',remote);dbState=snap.metadata.fromCache?'offline':'ok';
+    updatePill();renderList();
+  },err=>{if(err&&err.code==='permission-denied'){readOnly=true}dbState='offline';updatePill()});
+  flush();
+});
+
+/* ---------- service worker (sin señal + actualizaciones) ---------- */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(reg=>{
+    const ask=w=>{$('#upd').classList.remove('hide');$('#updBtn').onclick=()=>w.postMessage('skipWaiting')};
+    if(reg.waiting&&navigator.serviceWorker.controller)ask(reg.waiting);
+    reg.addEventListener('updatefound',()=>{const w=reg.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)ask(w)})});
+    setInterval(()=>reg.update().catch(()=>{}),30*60*1000);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg.update().catch(()=>{})});
+  });
+  let reloading=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloading)return;reloading=true;location.reload()});
+}
+})();
+</script>
+</body>
+</html>
