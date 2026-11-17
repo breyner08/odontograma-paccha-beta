@@ -106,12 +106,12 @@ table.t td:last-child{text-align:right;font-weight:600}
     <div class="grid">
       <label class="f" style="grid-column:1/-1">Nombre y apellidos<input id="fNom" list="names" autocomplete="off" placeholder="Escribe el nombre"></label>
       <datalist id="names"></datalist>
-      <label class="f">Fecha de nacimiento<input id="fNac" type="date"></label>
+      <label class="f">Fecha de nacimiento<input id="fNac" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" autocomplete="off"></label>
       <label class="f">Edad (años cumplidos)<input id="fEdad" type="number" inputmode="numeric" min="1" max="110"><span id="edadHint" style="font-size:11px"></span></label>
       <label class="f">Sexo<select id="fSexo"><option value="">—</option><option>Femenino</option><option>Masculino</option></select></label>
       <label class="f">Grado y sección<select id="fGrado"></select></label>
       <label class="f">Tipo de evaluación<select id="fTipo"><option>Diagnóstico</option><option>Control 1 (solo IHO)</option><option>Control 2 (solo IHO)</option></select></label>
-      <label class="f">Fecha de examen<input id="fFecha" type="date"></label>
+      <label class="f">Fecha de examen<input id="fFecha" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" autocomplete="off"></label>
       <label class="f">DNI (opcional)<input id="fDni" inputmode="numeric" maxlength="8" autocomplete="off"></label>
       <label class="f">SIS (opcional)<input id="fSis" autocomplete="off"></label>
       <label class="f" style="grid-column:1/-1">Dirección<input id="fDir" autocomplete="off"></label>
@@ -200,7 +200,7 @@ table.t td:last-child{text-align:right;font-weight:600}
       <label class="f hide" id="cInstrW"><span id="cInstrL">Grado de instrucción</span><select id="cInstr"></select></label>
       <label class="f">Colegio / grupo<input id="cCol" autocomplete="off"></label>
       <label class="f">Toma del CAPSO<select id="cToma"></select></label>
-      <label class="f">Fecha<input id="cFecha" type="date"></label>
+      <label class="f">Fecha<input id="cFecha" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" autocomplete="off"></label>
     </div>
     <div id="capPref" class="msg ok hide"></div>
   </div>
@@ -275,6 +275,9 @@ const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const norm=s=>(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toDMY=iso=>{if(!iso)return'';const m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:String(iso)};
+const toISO=t=>{const m=String(t||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(!m)return null;const d=+m[1],mo=+m[2],y=+m[3];const dt=new Date(y,mo-1,d);if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d)return null;return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0')};
+function dateMask(el,onISO){el.addEventListener('input',()=>{const dg=el.value.replace(/\D/g,'').slice(0,8);let v=dg;if(dg.length>4)v=dg.slice(0,2)+'/'+dg.slice(2,4)+'/'+dg.slice(4);else if(dg.length>2)v=dg.slice(0,2)+'/'+dg.slice(2);el.value=v;const iso=dg.length===8?toISO(v):null;el.style.borderColor=dg.length===8&&!iso?'var(--err)':'';if(!dg.length)onISO('');else if(iso)onISO(iso)})}
 const fmt=n=>n==null||isNaN(n)?'—':(Math.round(n*100)/100).toString().replace('.',',');
 const ABS=t=>t.m==='8'||t.m==='x';
 const S0=()=>({V:'0',L:'0',M:'0',D:'0',O:'0'});
@@ -491,7 +494,7 @@ function renderIHO(){
 /* ---------- formulario ---------- */
 const sel=$('#fGrado');sel.innerHTML='<option value="">—</option>'+GRADOS.map(g=>'<option>'+g+'</option>').join('');
 function fillForm(){
-  if(!F.est)F.est=estBlank();if(F.colegio==null)F.colegio='';$('#fNom').value=F.nombre;$('#fNac').value=F.nac||'';$('#fDni').value=F.dni||'';$('#fSis').value=F.sis||'';$('#fDir').value=F.dir||'';$('#fCol').value=F.colegio||'';$('#fEdad').value=F.edad;edadHint();renderEst();$('#fSexo').value=F.sexo;$('#fGrado').value=F.grado;$('#fTipo').value=F.tipo;$('#fFecha').value=F.fecha;$('#fDent').value=F.dent;$('#fObs').value=F.obs;
+  if(!F.est)F.est=estBlank();if(F.colegio==null)F.colegio='';$('#fNom').value=F.nombre;$('#fNac').value=toDMY(F.nac);$('#fDni').value=F.dni||'';$('#fSis').value=F.sis||'';$('#fDir').value=F.dir||'';$('#fCol').value=F.colegio||'';$('#fEdad').value=F.edad;edadHint();renderEst();$('#fSexo').value=F.sexo;$('#fGrado').value=F.grado;$('#fTipo').value=F.tipo;$('#fFecha').value=toDMY(F.fecha);$('#fDent').value=F.dent;$('#fObs').value=F.obs;
   $('#ftitle').textContent=F.id?'Editando registro':'Datos del paciente';
   $('#bSave').textContent=F.id?'Guardar cambios':'Guardar registro';
   toggleCtrl();render();
@@ -506,7 +509,7 @@ function ageOf(nac,fecha){if(!nac||!fecha)return null;const a=nac.split('-').map
 function ageYMD(nac,fecha){if(!nac||!fecha)return null;const [y1,m1,d1]=nac.split('-').map(Number),[y2,m2,d2]=fecha.split('-').map(Number);let y=y2-y1,m=m2-m1,d=d2-d1;if(d<0){m--;d+=new Date(y2,m2-1,0).getDate()}if(m<0){y--;m+=12}if(y<0)return null;return y+' a '+m+' m '+d+' d'}
 function edadHint(){const h=$('#edadHint'),y=ageOf(F.nac,F.fecha);$('#fEdad').readOnly=false;h.style.fontSize='12px';h.style.fontWeight='400';h.style.color='var(--tx2)';if(y==null){h.textContent=F.nac?'':'Escríbela si no recuerda su fecha de nacimiento';return}if(y<0||y>110){h.textContent='Revisa la fecha de nacimiento';h.style.color='var(--warn)';return}if(String(y)!==String(F.edad)){h.textContent='No coincide con la fecha de nacimiento ('+ageYMD(F.nac,F.fecha)+')';h.style.color='var(--warn)';return}h.textContent=ageYMD(F.nac,F.fecha);h.style.fontSize='13px';h.style.fontWeight='600'}
 function setAge(){const y=ageOf(F.nac,F.fecha);if(y!=null&&y>=0&&y<=110){F.edad=String(y);$('#fEdad').value=F.edad;F.edadYMD=ageYMD(F.nac,F.fecha)||'';if(!F.touched)F.pos=blankPos(F.dent,F.edad)}edadHint();persist();render()}
-$('#fNac').onchange=e=>{F.nac=e.target.value;setAge()};
+dateMask($('#fNac'),iso=>{F.nac=iso;setAge()});
 $('#fDni').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'');F.dni=e.target.value;persist()};
 $('#fSis').oninput=e=>{F.sis=e.target.value;persist()};
 $('#fDir').oninput=e=>{F.dir=e.target.value;persist()};
@@ -524,7 +527,7 @@ function renderEst(){
   });
 }
 $('#fGrado').onchange=e=>{F.grado=e.target.value;if(/^comunidad/i.test(F.grado)&&F.colegio==='I.E. Dos de Mayo'){F.colegio='';$('#fCol').value=''}persist()};
-$('#fFecha').onchange=e=>{F.fecha=e.target.value;setAge()};
+dateMask($('#fFecha'),iso=>{F.fecha=iso;setAge()});
 $('#fObs').oninput=e=>{F.obs=e.target.value;persist()};
 $('#fTipo').onchange=e=>{F.tipo=e.target.value;toggleCtrl();persist();prefill()};
 $('#fDent').onchange=e=>{F.dent=e.target.value;F.pos=blankPos(F.dent,F.edad);F.touched=false;cur=firstOf(F.dent);persist();render()};
@@ -540,7 +543,7 @@ function prefill(){
   for(const k of['nac','dni','sis','dir']){if(!F[k]&&prev[k]){F[k]=prev[k];ch=true}}
   if(F.nac){const y=ageOf(F.nac,F.fecha);if(y!=null&&y>=0)F.edad=String(y)}
   if(F.tipo!=='Diagnóstico'&&prev.dent){F.dent=prev.dent;F.pos=prev.pos?JSON.parse(JSON.stringify(prev.pos)):blankPos(prev.dent,F.edad)}
-  if(ch||F.tipo!=='Diagnóstico'){persist();fillForm();const m=$('#prefMsg');m.textContent='Datos cargados del registro anterior de '+prev.nombre+' ('+prev.tipo+', '+prev.fecha+').';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),5000)}
+  if(ch||F.tipo!=='Diagnóstico'){persist();fillForm();const m=$('#prefMsg');m.textContent='Datos cargados del registro anterior de '+prev.nombre+' ('+prev.tipo+', '+toDMY(prev.fecha)+').';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),5000)}
 }
 $('#bNuevo').onclick=()=>{F=newForm();cur=firstOf('P');persist();fillForm();$('#saveMsg').classList.add('hide');window.scrollTo(0,0)};
 
@@ -559,7 +562,7 @@ $('#bSave').onclick=()=>{
   if(errs.length){sm.textContent='Falta: '+errs.join(', ')+'.';sm.classList.remove('hide');return}
   if(F.tipo==='Diagnóstico'&&!F.id&&confirmDup!==norm(F.nombre)){
     const dup=allRecords().find(r=>r.tipo==='Diagnóstico'&&norm(r.nombre)===norm(F.nombre));
-    if(dup){confirmDup=norm(F.nombre);sm.textContent='Ya hay un diagnóstico de '+dup.nombre+' ('+dup.fecha+'). Toca «Guardar» otra vez si es otra persona con el mismo nombre.';sm.classList.remove('hide');return}
+    if(dup){confirmDup=norm(F.nombre);sm.textContent='Ya hay un diagnóstico de '+dup.nombre+' ('+toDMY(dup.fecha)+'). Toca «Guardar» otra vez si es otra persona con el mismo nombre.';sm.classList.remove('hide');return}
   }
   const warn=[];
   if(F.dni&&F.dni.length!==8)warn.push('el DNI no tiene 8 dígitos');
@@ -621,7 +624,7 @@ function renderList(){
     if(r.tipo==='Diagnóstico'){if(r.dent!=='D')ix.push('CPOD '+(R.p.C+R.p.P+R.p.O));if(r.dent!=='P')ix.push('ceod '+(R.d.C+R.d.P+R.d.O))}
     const ih=ihoOf(r);if(ih!=null)ix.push('IHO '+fmt(ih));
     const el=document.createElement('div');el.className='it';
-    el.innerHTML='<div><b>'+esc(r.nombre)+'</b>'+(pending[r.id]?'<span class="badge">sin subir</span>':'')+'<div class="muted">'+esc(r.edadYMD||(r.edad+' a'))+' · '+esc((r.sexo||'').charAt(0))+' · '+esc(r.grado||'—')+' · '+esc(r.tipo)+' · '+esc(r.fecha)+'</div><div class="muted">'+ix.join(' · ')+'</div></div>';
+    el.innerHTML='<div><b>'+esc(r.nombre)+'</b>'+(pending[r.id]?'<span class="badge">sin subir</span>':'')+'<div class="muted">'+esc(r.edadYMD||(r.edad+' a'))+' · '+esc((r.sexo||'').charAt(0))+' · '+esc(r.grado||'—')+' · '+esc(r.tipo)+' · '+esc(toDMY(r.fecha))+'</div><div class="muted">'+ix.join(' · ')+'</div></div>';
     const bx=document.createElement('div');bx.className='row';
     const be=document.createElement('button');be.className='btn sm';be.textContent='Editar';
     be.onclick=()=>{F=fixPos(JSON.parse(JSON.stringify(r)));F.touched=true;cur=firstOf(F.dent);persist();show('N');fillForm();window.scrollTo(0,0)};
@@ -646,7 +649,7 @@ function rowOf(r){
   const I=ihoInfo(r),ih=I.iho,r2=x=>x==null?'':Math.round(x*100)/100,sx=a=>(r.ihoNA?Array(6).fill('NA'):(a||[null,null,null,null,null,null]).map(v=>v==null?'':v==='x'?'NR':v));
   const od=dx?ORDERS[r.dent].filter(n=>r.pos[n]&&!ABS(r.pos[n])).map(n=>{const t=r.pos[n];const q=QD(n),pp=PP(n);if(t.m)return n+'['+t.m+(t.f?'·'+t.f:'')+']';return n+'['+faces(pp).map(f=>flab(f,q)+t.s[f]).join(' ')+(t.f?' ·'+t.f:'')+']'}).join(' '):'';
   const est=k=>{const e=(r.est||{})[k];if(!e||r.tipo!=='Diagnóstico')return'';return e.v==='SI'?'SÍ'+(e.d?': '+e.d:''):'NO'};
-  return[r.fecha,r.tipo,r.nombre,r.nac||'',r.edad,r.edadYMD||ageYMD(r.nac,r.fecha)||'',r.sexo,r.dni||'',r.sis||'',r.dir||'',r.colegio||'',r.grado,...EST.map(est),DN[r.dent],...pv,...dv,...sx(r.iho),...sx(r.ipc),r.ihoNA?'':SEXT.map((_,i)=>sextTooth(r,i)||'—').join(', '),r2(I.ipb),r2(I.ipc),r2(ih),I.cls,r.obs||'',od];
+  return[toDMY(r.fecha),r.tipo,r.nombre,toDMY(r.nac),r.edad,r.edadYMD||ageYMD(r.nac,r.fecha)||'',r.sexo,r.dni||'',r.sis||'',r.dir||'',r.colegio||'',r.grado,...EST.map(est),DN[r.dent],...pv,...dv,...sx(r.iho),...sx(r.ipc),r.ihoNA?'':SEXT.map((_,i)=>sextTooth(r,i)||'—').join(', '),r2(I.ipb),r2(I.ipc),r2(ih),I.cls,r.obs||'',od];
 }
 function rows(){return allRecords().sort((a,b)=>(a.creado||0)-(b.creado||0)).map(rowOf)}
 function lmsg(t,ok){const m=$('#lMsg');m.className='msg'+(ok?' ok':'');m.textContent=t;setTimeout(()=>m.classList.add('hide'),6000)}
@@ -841,7 +844,7 @@ $('#pvClose').onclick=()=>{$('#pv').classList.add('hide');document.body.style.ov
 $('#pvDl').onclick=async()=>{
   if(!pdfRec||!downloads)return;const m=$('#pvMsg');
   try{const bytes=toPDF(pdfBuild(JSON.parse(JSON.stringify(pdfRec))));
-    await downloads.save({filename:(pdfKind==='capso'?'CAPSO '+(pdfRec.toma||'').split(' (')[0].replace('CAPSO ','')+' ':'Ficha ')+pdfRec.nombre.replace(/[\\/:*?"<>|]/g,'')+' '+pdfRec.fecha+'.pdf',data:new Blob([bytes],{type:'application/pdf'})});
+    await downloads.save({filename:(pdfKind==='capso'?'CAPSO '+(pdfRec.toma||'').split(' (')[0].replace('CAPSO ','')+' ':'Ficha ')+pdfRec.nombre.replace(/[\\/:*?"<>|]/g,'')+' '+toDMY(pdfRec.fecha).replace(/\//g,'-')+'.pdf',data:new Blob([bytes],{type:'application/pdf'})});
     m.className='msg ok';m.textContent='PDF descargado.';
   }catch(e){if(e&&e.code==='declined')return;m.className='msg';m.textContent='No se pudo descargar el PDF'+(e&&e.code?' ('+e.code+')':'')+'.'}
 };
@@ -1051,7 +1054,7 @@ $('#cInstr').onchange=e=>{G.instr=e.target.value;capPersist()};
 $('#cToma').innerHTML=CAP_TOMAS.map(t=>'<option>'+t+'</option>').join('');
 let capMissShow=false,capConfirm=null;
 function capFill(){
-  $('#cNom').value=G.nombre;$('#cEdad').value=G.edad;$('#cSexo').value=G.sexo;$('#cGrado').value=G.grado;$('#cInstr').value=G.instr||'';$('#cApod').value=G.apod||'';capInstrShow();$('#cCol').value=G.colegio||'';$('#cToma').value=G.toma;$('#cFecha').value=G.fecha;
+  $('#cNom').value=G.nombre;$('#cEdad').value=G.edad;$('#cSexo').value=G.sexo;$('#cGrado').value=G.grado;$('#cInstr').value=G.instr||'';$('#cApod').value=G.apod||'';capInstrShow();$('#cCol').value=G.colegio||'';$('#cToma').value=G.toma;$('#cFecha').value=toDMY(G.fecha);
   $('#capTitle').textContent=G.id?'Editando CAPSO':'CAPSO · datos de la persona';$('#capSave').textContent=G.id?'Guardar cambios':'Guardar CAPSO';
   capPersist();capRender();
 }
@@ -1140,7 +1143,7 @@ $('#cSexo').onchange=e=>{G.sexo=e.target.value;capPersist()};
 $('#cGrado').onchange=e=>{G.grado=e.target.value;if(/^comunidad/i.test(G.grado)&&G.colegio==='I.E. Dos de Mayo'){G.colegio='';$('#cCol').value=''}if(!capCom())G.instr='';capInstrShow();capPersist()};
 $('#cCol').oninput=e=>{G.colegio=e.target.value;capPersist()};
 $('#cToma').onchange=e=>{G.toma=e.target.value;capPersist()};
-$('#cFecha').onchange=e=>{G.fecha=e.target.value;capPersist()};
+dateMask($('#cFecha'),iso=>{G.fecha=iso;capPersist()});
 function capPrefill(){
   if(G.id)return;const n=norm(G.nombre);if(!n)return;
   const prev=[...allRecords(),...allCapso()].filter(r=>norm(r.nombre)===n).sort((a,b)=>(b.actualizado||0)-(a.actualizado||0))[0];if(!prev)return;
@@ -1156,7 +1159,7 @@ $('#capSave').onclick=()=>{
   const miss=capMissing();const key=norm(G.nombre)+'|'+G.toma+'|'+miss.length;
   if(miss.length&&capConfirm!==key){capConfirm=key;capMissShow=true;capRender();m.textContent='Faltan '+miss.length+' respuestas (marcadas en naranja). Toca «Guardar» otra vez para guardarlo incompleto.';m.classList.remove('hide');return}
   if(!G.id&&capConfirm!==key+'dup'){const dup=allCapso().find(r=>norm(r.nombre)===norm(G.nombre)&&r.toma===G.toma);
-    if(dup){capConfirm=key+'dup';m.textContent='Ya hay un '+G.toma+' de '+dup.nombre+' ('+dup.fecha+'). Toca «Guardar» otra vez si es otra persona.';m.classList.remove('hide');return}}
+    if(dup){capConfirm=key+'dup';m.textContent='Ya hay un '+G.toma+' de '+dup.nombre+' ('+toDMY(dup.fecha)+'). Toca «Guardar» otra vez si es otra persona.';m.classList.remove('hide');return}}
   const now=Date.now(),id=G.id||('c'+now.toString(36)+Math.random().toString(36).slice(2,7));
   const rec={_t:'capso',id,nombre:G.nombre.trim(),edad:+G.edad,sexo:G.sexo,grado:G.grado,instr:capCom()?(G.instr||''):'',apod:capMenor()?(G.apod||'').trim():'',colegio:G.colegio||'',toma:G.toma,fecha:G.fecha,raw:G.raw,resp:capDerive(G.raw).R,creado:G.creado||now,actualizado:now};
   pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
@@ -1174,7 +1177,7 @@ function renderCapList(){
   const shown=all.filter(r=>!q||norm(r.nombre+' '+(r.grado||'')+' '+r.toma).includes(q));
   if(!shown.length){box.innerHTML='<p class="muted">'+(all.length?'Sin resultados.':'Aún no hay CAPSO registrados.')+'</p>';return}
   shown.forEach(r=>{const S=capScores(r);const el=document.createElement('div');el.className='it';
-    el.innerHTML='<div><b>'+esc(r.nombre)+'</b>'+(pending[r.id]?'<span class="badge">sin subir</span>':'')+'<div class="muted">'+esc(r.edad)+' a · '+esc((r.sexo||'').charAt(0))+' · '+esc(r.grado||'—')+' · '+esc(r.toma)+' · '+esc(r.fecha)+'</div><div class="muted">Conocimientos '+(S.con==null?'—':S.con+'/9')+' · Actitud '+(S.suma==null?'—':S.suma+' ('+S.actitud+')')+'</div></div>';
+    el.innerHTML='<div><b>'+esc(r.nombre)+'</b>'+(pending[r.id]?'<span class="badge">sin subir</span>':'')+'<div class="muted">'+esc(r.edad)+' a · '+esc((r.sexo||'').charAt(0))+' · '+esc(r.grado||'—')+' · '+esc(r.toma)+' · '+esc(toDMY(r.fecha))+'</div><div class="muted">Conocimientos '+(S.con==null?'—':S.con+'/9')+' · Actitud '+(S.suma==null?'—':S.suma+' ('+S.actitud+')')+'</div></div>';
     const bx=document.createElement('div');bx.className='row';
     const be=document.createElement('button');be.className='btn sm';be.textContent='Editar';be.onclick=()=>{G=JSON.parse(JSON.stringify(r));delete G._t;if(!G.raw)G.raw={a:{},ovr:Object.assign({},r.resp||{}),cp:{},f1:[],f7:[],lik:{}};capMissShow=false;capPersist();show('C');capFill();window.scrollTo(0,0)};
     const bd=document.createElement('button');bd.className='btn sm danger';bd.textContent=cdelArm===r.id?'¿Eliminar? Toca otra vez':'Eliminar';
@@ -1183,7 +1186,7 @@ function renderCapList(){
     const bpc=document.createElement('button');bpc.className='btn sm';bpc.textContent='PDF';bpc.onclick=()=>openPDF(r,'capso');bx.append(bpc,be,bd);el.appendChild(bx);box.appendChild(el)});
 }
 const CAP_HEAD=['Fecha','TOMA CAPSO','NOMBRES Y APELLIDOS','EDAD','sexo','GRADO Y SECCIÓN','COLEGIO / GRUPO','GRADO DE INSTRUCCIÓN','APODERADO',...CAP_ORDER,'SUMA','ACTITUD','ACTITUD (texto)','CONOCIMIENTOS CORRECTOS (0-9)'];
-function capRow(r){const S=capScores(r);return[r.fecha,r.toma,r.nombre,r.edad,r.sexo==='Femenino'?0:r.sexo==='Masculino'?1:'',r.grado||'',r.colegio||'',/^comunidad/i.test(r.grado||'')?(r.instr||''):(r.grado||''),r.apod||'',...CAP_ORDER.map(k=>{const v=capCode(k,(r.resp||{})[k]);return v==null?'':v}),S.suma==null?'':S.suma,S.suma==null?'':(S.suma>=CAP_CORTE?0:1),S.actitud,S.con==null?'':S.con]}
+function capRow(r){const S=capScores(r);return[toDMY(r.fecha),r.toma,r.nombre,r.edad,r.sexo==='Femenino'?0:r.sexo==='Masculino'?1:'',r.grado||'',r.colegio||'',/^comunidad/i.test(r.grado||'')?(r.instr||''):(r.grado||''),r.apod||'',...CAP_ORDER.map(k=>{const v=capCode(k,(r.resp||{})[k]);return v==null?'':v}),S.suma==null?'':S.suma,S.suma==null?'':(S.suma>=CAP_CORTE?0:1),S.actitud,S.con==null?'':S.con]}
 function capRows(){return allCapso().sort((a,b)=>(a.creado||0)-(b.creado||0)).map(capRow)}
 window.__capRefresh=()=>{renderList();if(!$('#vRes').classList.contains('hide'))renderRes()};
 
