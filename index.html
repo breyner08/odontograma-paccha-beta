@@ -687,7 +687,7 @@ function toSVG(pg){
 function toPDF(pages){
   const K=842/1280,objs=[];const add=s=>{objs.push(s);return objs.length};
   const fonts=['Helvetica','Helvetica-Bold','Helvetica-Oblique','Helvetica-BoldOblique'].map(n=>add('<< /Type /Font /Subtype /Type1 /BaseFont /'+n+' /Encoding /WinAnsiEncoding >>'));
-  const enc=s=>{let o='';for(const ch of s){let c=ch.charCodeAt(0);if(c>255)c=63;const k=String.fromCharCode(c);o+=(k==='\\'||k==='('||k===')')?'\\'+k:k}return o};
+  const enc=s=>{let o='';for(const ch of s){let c=ch.charCodeAt(0);if(c>255){c={8220:147,8221:148,8216:145,8217:146,8230:133,8211:150,8212:151,8226:149,8364:128}[c]||63}const k=String.fromCharCode(c);o+=(k==='\\'||k==='('||k===')')?'\\'+k:k}return o};
   const n=v=>(Math.round(v*100)/100).toString();
   const pageIds=[];const kids=[];const pagesId=objs.length+1+pages.length*2;
   for(const pg of pages){
@@ -825,22 +825,103 @@ function buildFicha(r){
   tb(898,[137,244,340,437,544,700],['FECHA','EDAD','PESO','TALLA','RESULTADOS'],9);
   return D.pages;
 }
-let pdfRec=null;
-function openPDF(r){
-  pdfRec=r;const pages=buildFicha(JSON.parse(JSON.stringify(r)));
+let pdfRec=null,pdfKind='ficha';
+const pdfBuild=r=>pdfKind==='capso'?buildCapso(r):buildFicha(r);
+function openPDF(r,kind){
+  pdfRec=r;pdfKind=kind||'ficha';const pages=pdfBuild(JSON.parse(JSON.stringify(r)));
   $('#pvPages').innerHTML=pages.map(p=>'<div class="pvp">'+toSVG(p)+'</div>').join('');
-  $('#pvTitle').textContent='Ficha · '+r.nombre;$('#pv').classList.remove('hide');document.body.style.overflow='hidden';
+  $('#pvTitle').textContent=(pdfKind==='capso'?'CAPSO · ':'Ficha · ')+r.nombre;$('#pv').classList.remove('hide');document.body.style.overflow='hidden';
   $('#pvDl').classList.toggle('hide',!downloads);$('#pvMsg').classList.add('hide');
 }
 $('#pvClose').onclick=()=>{$('#pv').classList.add('hide');document.body.style.overflow=''};
 $('#pvDl').onclick=async()=>{
   if(!pdfRec||!downloads)return;const m=$('#pvMsg');
-  try{const bytes=toPDF(buildFicha(JSON.parse(JSON.stringify(pdfRec))));
-    await downloads.save({filename:'Ficha '+pdfRec.nombre.replace(/[\\/:*?"<>|]/g,'')+' '+pdfRec.fecha+'.pdf',data:new Blob([bytes],{type:'application/pdf'})});
+  try{const bytes=toPDF(pdfBuild(JSON.parse(JSON.stringify(pdfRec))));
+    await downloads.save({filename:(pdfKind==='capso'?'CAPSO '+(pdfRec.toma||'').split(' (')[0].replace('CAPSO ','')+' ':'Ficha ')+pdfRec.nombre.replace(/[\\/:*?"<>|]/g,'')+' '+pdfRec.fecha+'.pdf',data:new Blob([bytes],{type:'application/pdf'})});
     m.className='msg ok';m.textContent='PDF descargado.';
   }catch(e){if(e&&e.code==='declined')return;m.className='msg';m.textContent='No se pudo descargar el PDF'+(e&&e.code?' ('+e.code+')':'')+'.'}
 };
-window.__ficha={buildFicha,toPDF,toSVG};
+window.__ficha={buildFicha,toPDF,toSVG,buildCapso:r=>buildCapso(r)};
+/* ---- PDF del CAPSO (formato del cuestionario UPCH) ---- */
+function wrapTxt(str,size,maxW,bold){const out=[];String(str||'').split('\n').forEach(par=>{const ws=par.split(/\s+/).filter(Boolean);let line='';ws.forEach(w=>{const t=line?line+' '+w:w;if(tw(t,size,bold)>maxW&&line){out.push(line);line=w}else line=t});out.push(line)});return out}
+function buildCapso(r){
+  const D=Doc();const raw=r.raw||{a:{},f1:[],f7:[]};const A=raw.a||{};const BL='#1f3fb0';
+  const der=r.raw?capDerive(r.raw):{R:r.resp||{},why:{},st:{}};const R=der.R;
+  const X0=108,X1=798,SZ=14;
+  const dmy=s=>{if(!s)return'';const [y,m,d]=s.split('-');return d+'/'+m+'/'+y};
+  let y;
+  const newPage=()=>{D.page(905,1280);y=80};
+  const field=(x,yy,lab,val,x2,lw)=>{D.text(x,yy,lab,SZ);const lx=x+tw(lab+' ',SZ);D.line(lx,yy+3,x2,yy+3,0.7);if(val)D.text(lx+4,yy-1,val,SZ-0.5,{col:BL})};
+  const ansLines=(val,n=1,indent=135,right=X1)=>{const ls=val?wrapTxt(val,SZ-0.5,right-indent-6):[];const nn=Math.max(n,Math.min(ls.length,3));for(let i=0;i<nn;i++){y+=24;D.line(indent,y+4,right,y+4,0.7);if(ls[i])D.text(indent+4,y,ls[i]+(i===2&&ls.length>3?'…':''),SZ-0.5,{col:BL})}y+=10};
+  let GAP=26;const Q=(num,txt,val,o={})=>{const ind=o.sub?135:108,tx=o.sub?135+tw(num+'  ',SZ):135;y+=GAP;
+    if(o.sub)D.text(ind,y,num,SZ);else D.text(X0,y,num+'.',SZ);
+    const ls=wrapTxt(txt,SZ,X1-tx);ls.forEach((l,i)=>{if(i)y+=18;D.text(tx,y,l,SZ)});
+    if(o.noLine)return;ansLines(val,o.lines||1,135)};
+  const yn=(val,labNo)=>{y+=30;D.text(135,y,'a) Si',SZ);D.text(237,y,'b) No'+(labNo||''),SZ);if(val==='Sí')D.ell(150,y-5,26,13,1.4);if(val==='No')D.ell(255,y-5,30,13,1.4)};
+  /* página 1 */
+  newPage();
+  ['Universidad Peruana Cayetano Heredia','Facultad de Estomatología','Roberto Beltrán Neira','Departamento Académico de Odontología Social'].forEach((t,i)=>D.text(X0,82+i*17,t,12.5,{b:1}));
+  D.text(452,172,'CUESTIONARIO SOBRE CONOCIMIENTOS, ACTITUDES Y PRACTICAS EN SALUD ORAL',13.5,{b:1,a:'c'}).text(452,190,'(CAPSO)',13.5,{b:1,a:'c'});
+  if(r.toma)D.text(X1,190,r.toma,11,{i:1,a:'r',col:BL});
+  const intro='Estimado poblador, nosotros somos alumnos de la Facultad de Estomatología “Roberto Beltrán Neira” de la Universidad Peruana Cayetano Heredia y estamos con usted para desarrollar un programa en Salud Oral. Por tal motivo el presente cuestionario tiene por finalidad obtener información respecto a la salud de su boca para registrar los conocimientos, actitudes y prácticas que tiene actualmente para que a partir de estos resultados, podamos orientarlo a usted y a su familia a mejorar sus hábitos en salud oral. Por favor contestar con sinceridad las preguntas que formularemos a continuación.';
+  wrapTxt(intro,13.5,X1-X0).forEach((l,i)=>D.text(X0,228+i*17.6,l,13.5));
+  const com=/^comunidad/i.test(r.grado||'');
+  field(X0,350,'Comunidad:','Paccha',484);field(490,350,'Mz.:','',575);field(580,350,'Lote:','',650);field(655,350,'Fecha:',dmy(r.fecha),X1);
+  field(X0,376,'Encuestador(a):',ALUMNO,484);
+  field(X0,403,'Encuestado(a):',r.nombre,476);field(482,403,'Apoderado*(a):','',X1);
+  field(X0,430,'Edad:',r.edad?String(r.edad):'',210);field(216,430,'Sexo:',r.sexo||'',340);field(346,430,'Grado de Instrucción**:',com?'':[r.grado,r.colegio].filter(Boolean).join(' – '),X1);
+  y=470;D.text(X0,y,'I.',SZ,{b:1}).text(162,y,'SECCION CONOCIMIENTOS',SZ,{b:1});y-=8;
+  Q('1','Mencione 5 alimentos que causen daño a sus dientes y porque?',[(raw.f1||[]).join(', '),A.q1why?'porque '+A.q1why:''].filter(Boolean).join(' — '));
+  Q('2','¿Porque es importante cepillarse los dientes?',A.q2);
+  Q('2.1.','¿Qué elementos debe emplear para la limpieza de la boca?',A.q21,{sub:1});
+  Q('3','¿Qué partes de la boca tiene que limpiar diariamente?',A.q3);
+  Q('4','¿Cada cuánto tiempo se debe ir al dentista? (tiempo expresado en meses)',A.q4);
+  Q('5','¿A que edad se debería ir por primera vez al dentista?',A.q5);
+  Q('6','Sabe usted ¿Que es el flúor?','',{noLine:1});yn(A.q6||R.p10,' (pase a la pregunta 7)');y+=30;D.text(135,y,'si la respuesta anterior es Si, responda:',SZ);y-=4;
+  const noF=(A.q6||R.p10)==='No';
+  Q('6.1.','¿Qué acción tiene?',noF?'':A.q61,{sub:1});Q('6.2.','¿Qué alimentos tienen flúor?',noF?'':A.q62,{sub:1});Q('6.3.','¿En que otros productos se puede encontrar el flúor?',noF?'':A.q63,{sub:1});
+  y+=26;D.text(X0,y,'II.',SZ,{b:1}).text(162,y,'SECCION PRACTICAS',SZ,{b:1});y-=8;
+  Q('7','¿Qué alimentos consumió usted ayer? (anotar todo aquello que esté fuera de las tres comidas principales)',A.q7none?'Nada fuera de las tres comidas principales':(raw.f7||[]).join(', '),{lines:3});
+  /* página 2 */
+  newPage();y=50;GAP=21;
+  Q('8','De los alimentos que consumió ayer, ¿A alguno le agregó azúcar? ¿Cuáles? (incluye todos los alimentos del día)',A.q8);
+  Q('9','¿Qué emplea usted para la limpieza de su boca? (si no responde cepillo, pase a la pregunta 11)',A.q9);
+  Q('10','¿Cuántas veces al día se cepilla los dientes?',A.q10!=null&&A.q10!==''?(A.q10==='1'?'1 vez':A.q10+' veces'):(R.p13!=null?R.p13+' veces':''));
+  Q('10.1.','En relación a la pregunta anterior, ¿En que momentos del día se cepilla los dientes?',A.q101,{sub:1});
+  Q('11','¿Hace cuánto tiempo visitó al dentista en el último año?',A.q11);
+  Q('11.1.','¿En que lugar lo atendieron?',A.q111,{sub:1});Q('11.2.','¿Cuál fue el motivo de su visita?',A.q112,{sub:1});
+  Q('12','¿Qué es lo que hace cuando tiene dolor de muela?',A.q12);
+  Q('13','¿Qué remedio o producto casero emplea o usa cuando tiene un dolor de muela?',A.q13);
+  Q('14','Por favor, ¿Podría mostrarme su paquete de sal? (Anotar la marca y la concentración de flúor que aparece en el paquete). Si contiene flúor, ¿como lo almacena?',[A.q14,raw.salFl===true?'contiene flúor':raw.salFl===false?'sin flúor':''].filter(Boolean).join(' — '));
+  Q('15','¿Usa usted pasta dental?','',{noLine:1});yn(A.q15);Q('15.1.','¿Por qué?',A.q151,{sub:1});
+  Q('16','¿En qué se basa para elegir la marca de pasta dental que compra?',A.q16);
+  y+=30;D.text(X0,y,'III SECCION ACTITUDES',SZ,{b:1}).text(X0+tw('III SECCION ACTITUDES ',SZ,1),y,'(Marcar con una X el casillero correspondiente)',SZ);
+  const tx0=X0,c1=560,cw=80,top=y+10,hh=58,rh=31;
+  D.rect(tx0,top,X1-tx0,hh+rh*8,1);[c1,c1+cw,c1+2*cw].forEach(x=>D.line(x,top,x,top+hh+rh*8,1));D.line(tx0+34,top+hh,tx0+34,top+hh+rh*8,1);
+  [['De','acuerdo'],['Ni de acuerdo,','ni en','desacuerdo'],['En','desacuerdo']].forEach((ls,i)=>ls.forEach((l,j)=>D.text(c1+cw*i+cw/2,top+18+j*14,l,11,{b:1,a:'c'})));
+  CAPQ[2].items.forEach((it,i)=>{const yy=top+hh+rh*i;D.line(tx0,yy,X1,yy,1);D.text(tx0+17,yy+21,String(17+i),SZ,{a:'c'});
+    const ls=wrapTxt(it.t.replace(/^P\d+\.\s*/,''),13,c1-tx0-44);ls.slice(0,2).forEach((l,j)=>D.text(tx0+40,yy+(ls.length>1?13:20)+j*14,l,12.5));
+    const v=R[it.k];const ci=C_LIK.indexOf(v);if(ci>=0)D.text(c1+cw*ci+cw/2,yy+22,'X',19,{b:1,a:'c',col:BL})});
+  y=top+hh+rh*8+24;D.text(X0,y,'* En caso de niños menores de 12 años     ** Del apoderado o encuestado de 12 años a más',12);
+  /* página 3: evaluación según la clave */
+  newPage();y=80;
+  D.text(452,y,'EVALUACIÓN SEGÚN LA CLAVE DE RESPUESTAS (CAPSO)',14,{b:1,a:'c'});y+=22;
+  D.text(452,y,r.nombre+' · '+(r.toma||'')+' · '+dmy(r.fecha),12,{a:'c',col:BL});y+=24;
+  const S=capScores({resp:R});
+  const cols=[X0,470,590,640,X1];
+  const head=['Ítem (clave)','Resultado','Cód.','Detalle'];
+  D.rect(X0,y,X1-X0,22,0.8,'#e8eef8');head.forEach((h,i)=>D.text(cols[i]+5,y+15,h,11.5,{b:1}));y+=22;
+  CAP_ORDER.filter(k=>k!=='p16.1').forEach(k=>{const v=R[k];const cd=capCode(k,v);const why=(der.why[k]||'').replace(/✓ /g,'(sí) ').replace(/✗ /g,'(no) ').replace(/≈ /g,'aprox. ');const det=wrapTxt((der.st[k]==='manual'?'(manual) ':'')+why,10,X1-cols[3]-8);const h=Math.max(20,8+det.length*12);
+    const tl=wrapTxt(CQ[k].t,10.5,cols[1]-X0-8);const hh2=Math.max(h,8+tl.length*13);
+    D.rect(X0,y,X1-X0,hh2,0.6);[cols[1],cols[2],cols[3]].forEach(x=>D.line(x,y,x,y+hh2,0.6));
+    tl.forEach((l,i)=>D.text(X0+5,y+14+i*13,l,10.5));D.text(cols[1]+5,y+14,v==null?'—':v,10.5,{b:1});D.text(cols[2]+25,y+14,cd==null?'':String(cd),10.5,{a:'c'});det.forEach((l,i)=>D.text(cols[3]+5,y+14+i*12,l,10,{col:'#555555'}));
+    y+=hh2;if(y>1180){newPage();y=80}});
+  y+=24;D.text(X0,y,'Conocimientos correctos: '+(S.con==null?'—':S.con+' / 9'),13,{b:1});y+=20;
+  D.text(X0,y,'Puntaje de actitudes: '+(S.suma==null?'—':S.suma+' (escala 8 a 24)')+'   ·   Actitud: '+(S.actitud||'—'),13,{b:1});y+=18;
+  D.text(X0,y,'Código: 0 = respuesta esperada según la clave (sabe / usa / consume…), 1 = no. De 18,7 a 24 = actitud favorable.',10.5,{i:1,col:'#555555'});
+  return D.pages;
+}
+
 
 /* ================= v2.1: CAPSO ================= */
 const CAP_TOMAS=['CAPSO 1 (Diagnóstico)','CAPSO 2 (1er control)','CAPSO 3 (2do control)'];
@@ -1088,7 +1169,7 @@ function renderCapList(){
     const bd=document.createElement('button');bd.className='btn sm danger';bd.textContent=cdelArm===r.id?'¿Eliminar? Toca otra vez':'Eliminar';
     bd.onclick=()=>{if(cdelArm!==r.id){cdelArm=r.id;renderList();setTimeout(()=>{if(cdelArm===r.id){cdelArm=null;renderList()}},4000);return}
       cdelArm=null;if(pending[r.id]){delete pending[r.id];LS.set(LSP+'pending',pending)}if(capRemote[r.id]){dels.push('capso:'+r.id);LS.set(LSP+'del',dels)}renderList();flush()};
-    bx.append(be,bd);el.appendChild(bx);box.appendChild(el)});
+    const bpc=document.createElement('button');bpc.className='btn sm';bpc.textContent='PDF';bpc.onclick=()=>openPDF(r,'capso');bx.append(bpc,be,bd);el.appendChild(bx);box.appendChild(el)});
 }
 const CAP_HEAD=['Fecha','TOMA CAPSO','NOMBRES Y APELLIDOS','EDAD','sexo','GRADO Y SECCIÓN','COLEGIO / GRUPO',...CAP_ORDER,'SUMA','ACTITUD','ACTITUD (texto)','CONOCIMIENTOS CORRECTOS (0-9)'];
 function capRow(r){const S=capScores(r);return[r.fecha,r.toma,r.nombre,r.edad,r.sexo==='Femenino'?0:r.sexo==='Masculino'?1:'',r.grado||'',r.colegio||'',...CAP_ORDER.map(k=>{const v=capCode(k,(r.resp||{})[k]);return v==null?'':v}),S.suma==null?'':S.suma,S.suma==null?'':(S.suma>=CAP_CORTE?0:1),S.actitud,S.con==null?'':S.con]}
