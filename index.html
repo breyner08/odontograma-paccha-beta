@@ -89,6 +89,7 @@ table.t td:last-child{text-align:right;font-weight:600}
 .segw{display:flex;flex-wrap:wrap;gap:4px}.segw button{flex:1 1 auto;min-height:38px;border:1px solid var(--bd2);border-radius:8px;background:var(--card);color:var(--tx);padding:4px 10px;font-size:13.5px}.segw button.on{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}.segw button:disabled{opacity:.45}
 .capi{padding:10px 0;border-top:1px solid var(--bd)}.capi:first-of-type{border-top:0}.capi .qt{font-weight:600;font-size:14px;margin-bottom:2px}.capi .qh{font-size:12px;color:var(--tx2);margin-bottom:6px}.capi.miss .qt{color:var(--warn)}
 .rt{width:100%;border-collapse:collapse;font-size:13px}.rt th,.rt td{padding:5px 6px;border:1px solid var(--bd);text-align:center}.rt th{background:var(--bg);font-weight:600}.rt td:first-child,.rt th:first-child{text-align:left}.rt tr.tot td{font-weight:700;background:var(--acs)}.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}.kpisvg{max-height:230px}#resBody svg{max-height:230px}.rh{font-size:14px;font-weight:700;margin:14px 0 6px}.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.kpi div{background:var(--bg);border-radius:8px;padding:8px 10px}.kpi b{display:block;font-size:19px}
+.sug{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:15;background:var(--card);border:1px solid var(--bd2);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:260px;overflow:auto;-webkit-overflow-scrolling:touch}.sug button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--bd);background:none;color:var(--tx);padding:10px 12px;font-size:15px}.sug button:last-child{border-bottom:0}.sug button small{display:block;color:var(--tx2);font-size:12px;margin-top:2px}.sug button:active{background:var(--acs)}
 .savebar{position:sticky;bottom:0;padding-bottom:max(10px,env(safe-area-inset-bottom))!important;background:var(--card);border-top:1px solid var(--bd);padding:10px 12px;display:flex;gap:8px;justify-content:flex-end;z-index:4;margin:0 -12px}
 </style>
 </head>
@@ -104,7 +105,7 @@ table.t td:last-child{text-align:right;font-weight:600}
   <div class="card">
     <h2 id="ftitle">Datos del paciente</h2>
     <div class="grid">
-      <label class="f" style="grid-column:1/-1">Nombre y apellidos<input id="fNom" list="names" autocomplete="off" placeholder="Escribe el nombre"></label>
+      <label class="f" style="grid-column:1/-1;position:relative">Nombre y apellidos<input id="fNom" name="paciente_x" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" placeholder="Escribe el nombre"><div class="sug hide" id="fSug"></div></label>
       <datalist id="names"></datalist>
       <label class="f">Fecha de nacimiento<input id="fNac" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" autocomplete="off"></label>
       <label class="f">Edad (años cumplidos)<input id="fEdad" type="number" inputmode="numeric" min="1" max="110"><span id="edadHint" style="font-size:11px"></span></label>
@@ -191,7 +192,7 @@ table.t td:last-child{text-align:right;font-weight:600}
   <div class="card">
     <h2 id="capTitle">CAPSO · datos de la persona</h2>
     <div class="grid">
-      <label class="f" style="grid-column:1/-1">Nombre y apellidos<input id="cNom" list="names2" autocomplete="off" placeholder="Escribe el nombre"></label>
+      <label class="f" style="grid-column:1/-1;position:relative">Nombre y apellidos<input id="cNom" name="encuestado_x" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" placeholder="Escribe el nombre"><div class="sug hide" id="cSug"></div></label>
       <datalist id="names2"></datalist>
       <label class="f">Edad (años)<input id="cEdad" type="number" inputmode="numeric" min="1" max="110"></label>
       <label class="f hide" id="cApodW" style="grid-column:1/-1">Apoderado(a) (menor de 12 años)<input id="cApod" autocomplete="off" placeholder="Nombre del apoderado"></label>
@@ -1348,6 +1349,24 @@ $('#rXlsx').onclick=async()=>{const m=$('#rMsg');
     const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
     await downloads.save({filename:'Resumen Paccha '+today()+'.xlsx',data:new Blob([out])});m.className='msg ok';m.textContent='Excel del resumen descargado.';m.classList.remove('hide')}
   catch(e){if(e&&e.code==='declined')return;m.className='msg';m.textContent='No se pudo generar el Excel.';m.classList.remove('hide')}};
+
+
+/* ---- sugerencias de nombre (odontograma y CAPSO comparten personas) ---- */
+function personIndex(){const m={};[...allRecords(),...allCapso()].forEach(r=>{const k=norm(r.nombre);if(!k)return;const e=m[k]||(m[k]={nombre:r.nombre,act:0,odo:0,cap:0,last:null});if(r._t)e.cap++;else e.odo++;if((r.actualizado||0)>=e.act){e.act=r.actualizado||0;e.last=r}});return Object.values(m)}
+function attachSuggest(inp,box,onPick){
+  const close=()=>{box.classList.add('hide');box.innerHTML=''};
+  const open=()=>{const q=norm(inp.value);if(q.length<2){close();return}
+    const toks=q.split(' ').filter(Boolean);
+    const L=personIndex().filter(p=>{const n=norm(p.nombre);return toks.every(t=>n.includes(t))&&n!==q}).sort((a,b)=>b.act-a.act).slice(0,8);
+    if(!L.length){close();return}
+    box.innerHTML='';L.forEach(p=>{const r=p.last||{};const b=document.createElement('button');b.type='button';
+      b.innerHTML=esc(p.nombre)+'<small>'+[r.edad?r.edad+' a':'',r.sexo||'',r.grado||'',p.odo?'odontograma ✓':'',p.cap?'CAPSO ✓':''].filter(Boolean).map(esc).join(' · ')+'</small>';
+      b.addEventListener('pointerdown',e=>{e.preventDefault();inp.value=p.nombre;close();onPick(p.nombre)});b.addEventListener('click',e=>e.preventDefault());box.appendChild(b)});
+    box.classList.remove('hide')};
+  inp.addEventListener('input',open);inp.addEventListener('focus',open);inp.addEventListener('blur',()=>setTimeout(close,150));
+}
+attachSuggest($('#fNom'),$('#fSug'),n=>{F.nombre=n;persist();prefill()});
+attachSuggest($('#cNom'),$('#cSug'),n=>{G.nombre=n;capPersist();capPrefill()});
 
 /* ---------- pestañas ---------- */
 function show(v){[['N','#vNew','#tabN'],['L','#vList','#tabL'],['C','#vCap','#tabC'],['R','#vRes','#tabR']].forEach(([k,sec,tb])=>{$(sec).classList.toggle('hide',v!==k);$(tb).classList.toggle('on',v===k)});if(v==='L')renderList();if(v==='R')renderRes();window.scrollTo(0,0)}
