@@ -248,8 +248,10 @@ table.t td:last-child{text-align:right;font-weight:600}
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,setPersistence,indexedDBLocalPersistence} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,setDoc,deleteDoc,onSnapshot,getDocsFromServer} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import {FIREBASE_CONFIG,ALLOWED_EMAIL,ENV as ENV0} from "./config.js";
-const ENV=Object.assign({suffix:"",ls:"cpod_",appName:"",label:"",version:"2.0"},ENV0||{});
+import * as CFG from "./config.js";
+const FIREBASE_CONFIG=CFG.FIREBASE_CONFIG,ALLOWED_EMAIL=CFG.ALLOWED_EMAIL||"";
+const IS_BETA=/-beta\//.test(location.pathname);
+const ENV=Object.assign(IS_BETA?{suffix:"_beta",ls:"cpodb_",appName:"beta",label:"BETA",version:"2.1"}:{suffix:"",ls:"cpod_",appName:"",label:"",version:"2.1"},CFG.ENV||{});
 const LSP=ENV.ls,COL_R="registros"+ENV.suffix,COL_C="capso"+ENV.suffix;
 (function(){
 const $=s=>document.querySelector(s);
