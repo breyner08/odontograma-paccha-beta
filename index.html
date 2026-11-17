@@ -501,7 +501,7 @@ function fillForm(){
 }
 function toggleCtrl(){const c=F.tipo!=='Diagnóstico';$('#cEst').classList.toggle('hide',c);$('#cOdo').classList.toggle('hide',c);$('#cCtrl').classList.toggle('hide',!c)}
 function persist(){LS.set(LSP+'draft',F)}
-$('#fNom').oninput=e=>{F.nombre=e.target.value;persist()};
+$('#fNom').oninput=e=>{F.nombre=e.target.value;persist();if(isKnownName(F.nombre))prefill()};
 $('#fNom').onchange=()=>prefill();
 $('#fEdad').oninput=e=>{F.edad=e.target.value;edadHint();if(!F.touched){F.pos=blankPos(F.dent,F.edad)}persist();render()};
 $('#fSexo').onchange=e=>{F.sexo=e.target.value;persist()};
@@ -531,19 +531,25 @@ dateMask($('#fFecha'),iso=>{F.fecha=iso;setAge()});
 $('#fObs').oninput=e=>{F.obs=e.target.value;persist()};
 $('#fTipo').onchange=e=>{F.tipo=e.target.value;toggleCtrl();persist();prefill()};
 $('#fDent').onchange=e=>{F.dent=e.target.value;F.pos=blankPos(F.dent,F.edad);F.touched=false;cur=firstOf(F.dent);persist();render()};
+function personProfile(nombre){
+  const n=norm(nombre);if(!n)return null;
+  const recs=[...allRecords(),...allCapso()].filter(r=>norm(r.nombre)===n).sort((a,b)=>(b.actualizado||0)-(a.actualizado||0));
+  if(!recs.length)return null;
+  const P={nombre:recs[0].nombre,fuente:recs[0]};
+  for(const k of['nac','sexo','grado','colegio','dni','sis','dir','instr','apod','edad'])for(const r of recs){if(r[k]!=null&&r[k]!==''){P[k]=r[k];break}}
+  P.lastCpod=recs.find(r=>!r._t)||null;return P;
+}
+const isKnownName=v=>{const n=norm(v);return !!n&&[...allRecords(),...allCapso()].some(r=>norm(r.nombre)===n)};
 function prefill(){
   if(F.id)return;
-  const n=norm(F.nombre);if(!n)return;
-  const prev=allRecords().filter(r=>norm(r.nombre)===n).sort((a,b)=>(b.actualizado||0)-(a.actualizado||0))[0];
-  if(!prev)return;
-  let ch=false;
-  if(!F.edad&&prev.edad){F.edad=prev.edad;ch=true}
-  if(!F.sexo&&prev.sexo){F.sexo=prev.sexo;ch=true}
-  if(!F.grado&&prev.grado){F.grado=prev.grado;ch=true}
-  for(const k of['nac','dni','sis','dir']){if(!F[k]&&prev[k]){F[k]=prev[k];ch=true}}
-  if(F.nac){const y=ageOf(F.nac,F.fecha);if(y!=null&&y>=0)F.edad=String(y)}
-  if(F.tipo!=='Diagnóstico'&&prev.dent){F.dent=prev.dent;F.pos=prev.pos?JSON.parse(JSON.stringify(prev.pos)):blankPos(prev.dent,F.edad)}
-  if(ch||F.tipo!=='Diagnóstico'){persist();fillForm();const m=$('#prefMsg');m.textContent='Datos cargados del registro anterior de '+prev.nombre+' ('+prev.tipo+', '+toDMY(prev.fecha)+').';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),5000)}
+  const P=personProfile(F.nombre);if(!P)return;
+  let ch=false;if(F.nombre!==P.nombre){F.nombre=P.nombre;ch=true}
+  for(const k of['nac','sexo','grado','dni','sis','dir']){if(!F[k]&&P[k]){F[k]=P[k];ch=true}}
+  {const col=P.colegio!=null?P.colegio:(/^\d+º/.test(P.grado||'')?null:'');if(col!=null&&(!F.colegio||F.colegio==='I.E. Dos de Mayo')&&F.colegio!==col){F.colegio=col;ch=true}}
+  if(F.nac){const y=ageOf(F.nac,F.fecha);if(y!=null&&y>=0){F.edad=String(y);ch=true}}else if(!F.edad&&P.edad){F.edad=String(P.edad);ch=true}
+  const prev=P.lastCpod;
+  if(F.tipo!=='Diagnóstico'&&prev&&prev.dent){F.dent=prev.dent;F.pos=prev.pos?JSON.parse(JSON.stringify(prev.pos)):blankPos(prev.dent,F.edad);ch=true}
+  if(ch){if(!F.touched&&F.tipo==='Diagnóstico')F.pos=blankPos(F.dent,F.edad);persist();fillForm();const m=$('#prefMsg');m.textContent='Datos personales cargados de '+P.nombre+' ('+(P.fuente._t?P.fuente.toma:P.fuente.tipo)+', '+toDMY(P.fuente.fecha)+').';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),6000)}
 }
 $('#bNuevo').onclick=()=>{F=newForm();cur=firstOf('P');persist();fillForm();$('#saveMsg').classList.add('hide');window.scrollTo(0,0)};
 
@@ -608,7 +614,7 @@ function renderList(){
   $('#names2').innerHTML=[...new Set([...all,...capAll].map(r=>r.nombre))].map(n=>'<option value="'+esc(n)+'">').join('');
   $('#list').classList.toggle('hide',lview!=='o');$('#clist').classList.toggle('hide',lview!=='c');$('#sum').classList.toggle('hide',lview!=='o');
   renderCapList();
-  $('#names').innerHTML=[...new Set(all.map(r=>r.nombre))].map(n=>'<option value="'+esc(n)+'">').join('');
+  $('#names').innerHTML=[...new Set([...all,...allCapso()].map(r=>r.nombre))].map(n=>'<option value="'+esc(n)+'">').join('');
   const dx=all.filter(r=>r.tipo==='Diagnóstico');
   const cp=dx.filter(r=>r.dent!=='D').map(r=>{const p=calc(r).p;return p.C+p.P+p.O});
   const ce=dx.filter(r=>r.dent!=='P').map(r=>{const d=calc(r).d;return d.C+d.P+d.O});
@@ -1136,7 +1142,7 @@ function capRender(){
   $('#capRes').innerHTML='<div class="kpi"><div><b>'+(tot-nm)+'/'+tot+'</b><span class="muted">ítems de la clave listos'+(nrev?' · '+nrev+' por revisar':'')+'</span></div><div><b>'+(S.con==null?'—':S.con+'/9')+'</b><span class="muted">conocimientos correctos</span></div><div><b>'+(S.suma==null?'—':S.suma)+'</b><span class="muted">puntaje de actitudes (8–24)</span></div><div><b>'+(S.actitud||'—')+'</b><span class="muted">actitud (corte 18,7)</span></div></div>'
     +'<details style="margin-top:8px"><summary>Ver la evaluación según la clave</summary><table class="t">'+CAP_ORDER.filter(k=>k!=='p16.1').map(k=>'<tr><td>'+esc(CQ[k].t)+'</td><td>'+esc(D.R[k]==null?(D.st[k]==='revisar'?'Revisar':'—'):D.R[k])+'</td></tr>').join('')+'</table></details>';
 }
-$('#cNom').oninput=e=>{G.nombre=e.target.value;capPersist()};
+$('#cNom').oninput=e=>{G.nombre=e.target.value;capPersist();if(isKnownName(G.nombre))capPrefill()};
 $('#cNom').onchange=()=>capPrefill();
 $('#cEdad').oninput=e=>{G.edad=e.target.value;capInstrShow();capPersist()};
 $('#cSexo').onchange=e=>{G.sexo=e.target.value;capPersist()};
@@ -1145,11 +1151,12 @@ $('#cCol').oninput=e=>{G.colegio=e.target.value;capPersist()};
 $('#cToma').onchange=e=>{G.toma=e.target.value;capPersist()};
 dateMask($('#cFecha'),iso=>{G.fecha=iso;capPersist()});
 function capPrefill(){
-  if(G.id)return;const n=norm(G.nombre);if(!n)return;
-  const prev=[...allRecords(),...allCapso()].filter(r=>norm(r.nombre)===n).sort((a,b)=>(b.actualizado||0)-(a.actualizado||0))[0];if(!prev)return;
-  let ch=false;
-  if(!G.edad&&prev.edad){G.edad=String(prev.edad);ch=true}if(!G.sexo&&prev.sexo){G.sexo=prev.sexo;ch=true}if(!G.grado&&prev.grado){G.grado=prev.grado;ch=true}if(!G.instr&&prev.instr){G.instr=prev.instr;ch=true}if(!G.apod&&prev.apod){G.apod=prev.apod;ch=true}
-  if(ch){capPersist();capFill();const m=$('#capPref');m.textContent='Datos cargados de un registro anterior de '+prev.nombre+'.';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),5000)}
+  if(G.id)return;const P=personProfile(G.nombre);if(!P)return;
+  let ch=false;if(G.nombre!==P.nombre){G.nombre=P.nombre;ch=true}
+  for(const k of['sexo','grado','instr','apod']){if(!G[k]&&P[k]){G[k]=P[k];ch=true}}
+  {const col=P.colegio!=null?P.colegio:(/^\d+º/.test(P.grado||'')?null:'');if(col!=null&&(!G.colegio||G.colegio==='I.E. Dos de Mayo')&&G.colegio!==col){G.colegio=col;ch=true}}
+  if(!G.edad){const y=P.nac?ageOf(P.nac,G.fecha):null;const e=y!=null&&y>=0?y:P.edad;if(e!=null&&e!==''){G.edad=String(e);ch=true}}
+  if(ch){capPersist();capFill();const m=$('#capPref');m.textContent='Datos personales cargados de '+P.nombre+' ('+(P.fuente._t?P.fuente.toma:P.fuente.tipo)+', '+toDMY(P.fuente.fecha)+').';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),6000)}
 }
 $('#capNew').onclick=()=>{G=capNew();capMissShow=false;capPersist();capFill();$('#capMsg').classList.add('hide');window.scrollTo(0,0)};
 $('#capSave').onclick=()=>{
