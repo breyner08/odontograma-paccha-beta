@@ -195,7 +195,7 @@ table.t td:last-child{text-align:right;font-weight:600}
       <label class="f" style="grid-column:1/-1;position:relative">Nombre y apellidos<input id="cNom" name="encuestado_x" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" placeholder="Escribe el nombre"><div class="sug hide" id="cSug"></div></label>
       <datalist id="names2"></datalist>
       <label class="f">Edad (años)<input id="cEdad" type="number" inputmode="numeric" min="1" max="110"></label>
-      <label class="f hide" id="cApodW" style="grid-column:1/-1">Apoderado(a) (menor de 12 años)<input id="cApod" autocomplete="off" placeholder="Nombre del apoderado"></label>
+      <label class="f hide" id="cApodW" style="grid-column:1/-1;position:relative">Apoderado(a) (menor de 12 años)<input id="cApod" name="apoderado_x" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" placeholder="Nombre del apoderado"><div class="sug hide" id="cApodSug"></div><div id="apodMsg" class="msg ok hide" style="margin-top:6px"></div></label>
       <label class="f">Sexo<select id="cSexo"><option value="">—</option><option>Femenino</option><option>Masculino</option></select></label>
       <label class="f">Grado y sección<select id="cGrado"></select></label>
       <label class="f hide" id="cInstrW"><span id="cInstrL">Grado de instrucción</span><select id="cInstr"></select></label>
@@ -921,7 +921,8 @@ function buildCapso(r){
   /* página 3: evaluación según la clave */
   newPage();y=80;
   D.text(452,y,'EVALUACIÓN SEGÚN LA CLAVE DE RESPUESTAS (CAPSO)',14,{b:1,a:'c'});y+=22;
-  D.text(452,y,r.nombre+' · '+(r.toma||'')+' · '+dmy(r.fecha),12,{a:'c',col:BL});y+=24;
+  D.text(452,y,r.nombre+' · '+(r.toma||'')+' · '+dmy(r.fecha),12,{a:'c',col:BL});y+=18;
+  if(raw.from)D.text(452,y,'Respuestas brindadas por el apoderado(a): '+raw.from.nombre,11,{a:'c',i:1});y+=10;
   const S=capScores({resp:R});
   const cols=[X0,470,590,640,X1];
   const head=['Ítem (clave)','Resultado','Cód.','Detalle'];
@@ -1059,7 +1060,7 @@ $('#cInstr').innerHTML='<option value="">—</option>'+INSTR.map(g=>'<option>'+g
 const capCom=()=>!/^\d+º/.test(G.grado||'');
 const capMenor=()=>G.edad!==''&&G.edad!=null&&+G.edad>0&&+G.edad<12;
 const capInstrShow=()=>{$('#cInstrW').classList.toggle('hide',!capCom());$('#cApodW').classList.toggle('hide',!capMenor());$('#cInstrL').textContent=capMenor()?'Grado de instrucción del apoderado':'Grado de instrucción'};
-$('#cApod').oninput=e=>{G.apod=e.target.value;capPersist()};
+$('#cApod').oninput=e=>{G.apod=e.target.value;capPersist();const P=apodSource(G.apod);if(P&&norm(G.apod)===norm(P.nombre))capCopyApod(P,false)};
 $('#cInstr').onchange=e=>{G.instr=e.target.value;capPersist()};
 $('#cToma').innerHTML=CAP_TOMAS.map(t=>'<option>'+t+'</option>').join('');
 let capMissShow=false,capConfirm=null;
@@ -1162,7 +1163,7 @@ function capPrefill(){
   if(!G.edad){const y=P.nac?ageOf(P.nac,G.fecha):null;const e=y!=null&&y>=0?y:P.edad;if(e!=null&&e!==''){G.edad=String(e);ch=true}}
   if(ch){capPersist();capFill();const m=$('#capPref');m.textContent='Datos personales cargados de '+P.nombre+' ('+(P.fuente._t?P.fuente.toma:P.fuente.tipo)+', '+toDMY(P.fuente.fecha)+').';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),6000)}
 }
-$('#capNew').onclick=()=>{G=capNew();capMissShow=false;capPersist();capFill();$('#capMsg').classList.add('hide');window.scrollTo(0,0)};
+$('#capNew').onclick=()=>{$('#apodMsg').classList.add('hide');G=capNew();capMissShow=false;capPersist();capFill();$('#capMsg').classList.add('hide');window.scrollTo(0,0)};
 $('#capSave').onclick=()=>{
   const m=$('#capMsg');m.className='msg';
   const errs=[];if(!G.nombre.trim())errs.push('nombre');if(!(+G.edad>0))errs.push('edad');if(!G.sexo)errs.push('sexo');if(capMenor()&&!(G.apod||'').trim())errs.push('apoderado (menor de 12 años)');
@@ -1175,7 +1176,7 @@ $('#capSave').onclick=()=>{
   const rec={_t:'capso',id,nombre:G.nombre.trim(),edad:+G.edad,sexo:G.sexo,grado:G.grado,instr:capCom()?(G.instr||''):'',apod:capMenor()?(G.apod||'').trim():'',colegio:G.colegio||'',toma:G.toma,fecha:G.fecha,raw:G.raw,resp:capDerive(G.raw).R,creado:G.creado||now,actualizado:now};
   pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
   const nm=rec.nombre;G=capNew();G.grado=rec.grado;G.colegio=rec.colegio;G.toma=rec.toma;G.fecha=rec.fecha;capMissShow=false;capConfirm=null;capPersist();capFill();
-  m.className='msg ok';m.textContent='CAPSO guardado: '+nm+'. Listo para la siguiente persona (se mantienen grado, colegio, toma y fecha).';m.classList.remove('hide');
+  $('#apodMsg').classList.add('hide');m.className='msg ok';m.textContent='CAPSO guardado: '+nm+'. Listo para la siguiente persona (se mantienen grado, colegio, toma y fecha).';m.classList.remove('hide');
   window.scrollTo({top:0,behavior:'smooth'});renderList();flush();
 };
 /* lista CAPSO */
@@ -1353,11 +1354,11 @@ $('#rXlsx').onclick=async()=>{const m=$('#rMsg');
 
 /* ---- sugerencias de nombre (odontograma y CAPSO comparten personas) ---- */
 function personIndex(){const m={};[...allRecords(),...allCapso()].forEach(r=>{const k=norm(r.nombre);if(!k)return;const e=m[k]||(m[k]={nombre:r.nombre,act:0,odo:0,cap:0,last:null});if(r._t)e.cap++;else e.odo++;if((r.actualizado||0)>=e.act){e.act=r.actualizado||0;e.last=r}});return Object.values(m)}
-function attachSuggest(inp,box,onPick){
+function attachSuggest(inp,box,onPick,flt){
   const close=()=>{box.classList.add('hide');box.innerHTML=''};
   const open=()=>{const q=norm(inp.value);if(q.length<2){close();return}
     const toks=q.split(' ').filter(Boolean);
-    const L=personIndex().filter(p=>{const n=norm(p.nombre);return toks.every(t=>n.includes(t))&&n!==q}).sort((a,b)=>b.act-a.act).slice(0,8);
+    const L=personIndex().filter(p=>(!flt||flt(p))).filter(p=>{const n=norm(p.nombre);return toks.every(t=>n.includes(t))&&n!==q}).sort((a,b)=>b.act-a.act).slice(0,8);
     if(!L.length){close();return}
     box.innerHTML='';L.forEach(p=>{const r=p.last||{};const b=document.createElement('button');b.type='button';
       b.innerHTML=esc(p.nombre)+'<small>'+[r.edad?r.edad+' a':'',r.sexo||'',r.grado||'',p.odo?'odontograma ✓':'',p.cap?'CAPSO ✓':''].filter(Boolean).map(esc).join(' · ')+'</small>';
@@ -1367,6 +1368,20 @@ function attachSuggest(inp,box,onPick){
 }
 attachSuggest($('#fNom'),$('#fSug'),n=>{F.nombre=n;persist();prefill()});
 attachSuggest($('#cNom'),$('#cSug'),n=>{G.nombre=n;capPersist();capPrefill()});
+/* apoderado: copiar sus respuestas al menor de 12 años */
+function apodSource(name){const n=norm(name);if(!n)return null;const L=allCapso().filter(r=>norm(r.nombre)===n&&r.id!==G.id);if(!L.length)return null;
+  return L.filter(r=>r.toma===G.toma).sort((a,b)=>(b.actualizado||0)-(a.actualizado||0))[0]||L.sort((a,b)=>(b.actualizado||0)-(a.actualizado||0))[0]}
+const capHasAnswers=()=>{const r=G.raw||{};return Object.values(r.a||{}).some(v=>v!=null&&v!==''&&v!==false)||(r.f1||[]).length||(r.f7||[]).length||Object.keys(r.lik||{}).some(k=>r.lik[k])};
+function capCopyApod(src,force){
+  const m=$('#apodMsg');
+  if(capHasAnswers()&&!force){m.className='msg';m.innerHTML='';const t=document.createElement('span');t.textContent=src.nombre+' tiene respuestas de '+src.toma+' ('+toDMY(src.fecha)+'). Este CAPSO ya tiene respuestas. ';const b=document.createElement('button');b.className='btn sm';b.type='button';b.textContent='Reemplazar con las del apoderado';b.onclick=()=>capCopyApod(src,true);m.append(t,b);m.classList.remove('hide');return}
+  const raw=src.raw?JSON.parse(JSON.stringify(src.raw)):{a:{},ovr:{},legacy:Object.assign({},src.resp||{}),cp:{},f1:[],f7:[],lik:{}};
+  G.raw=capNormRaw(raw);G.raw.from={id:src.id,nombre:src.nombre,toma:src.toma,fecha:src.fecha};
+  if(src.instr&&!G.instr)G.instr=src.instr;
+  capPersist();capFill();
+  m.className='msg ok';m.textContent='Respuestas copiadas de '+src.nombre+' ('+src.toma+', '+toDMY(src.fecha)+'). Revisa y corrige si algo cambia para el menor.';m.classList.remove('hide');
+}
+attachSuggest($('#cApod'),$('#cApodSug'),n=>{G.apod=n;capPersist();const P=apodSource(n);if(P)capCopyApod(P,false)},p=>p.cap>0);
 
 /* ---------- pestañas ---------- */
 function show(v){[['N','#vNew','#tabN'],['L','#vList','#tabL'],['C','#vCap','#tabC'],['R','#vRes','#tabR']].forEach(([k,sec,tb])=>{$(sec).classList.toggle('hide',v!==k);$(tb).classList.toggle('on',v===k)});if(v==='L')renderList();if(v==='R')renderRes();window.scrollTo(0,0)}
