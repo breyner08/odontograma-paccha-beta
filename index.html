@@ -122,6 +122,7 @@ table.t td:last-child{text-align:right;font-weight:600}
       <label class="f" style="grid-column:1/-1">Dirección<input id="fDir" autocomplete="off"></label>
       <label class="f">Colegio<select id="fColS"><option value="">—</option><option>I.E. Dos de Mayo</option><option value="__otro">Otro…</option></select><input id="fCol" class="hide" autocomplete="off" placeholder="Nombre del colegio o grupo" style="margin-top:6px"></label>
       <label class="f">Dentición<select id="fDent"><option value="P">Permanente</option><option value="M">Mixta</option><option value="D">Decidua</option></select></label>
+      <label class="f">Estado (padrón C.S.)<div id="padSt" style="min-height:40px;display:flex;align-items:center;gap:8px;border:1px solid var(--bd);border-radius:8px;padding:6px 10px;font-weight:600">—</div><span id="padStD" class="muted" style="font-size:11px"></span></label>
     </div>
     <div id="prefMsg" class="msg ok hide"></div>
     <div id="padDx" class="msg hide" style="background:var(--bg);color:var(--tx)"></div>
@@ -1387,7 +1388,8 @@ function personIndex(){const m={};[...allRecords(),...allCapso()].forEach(r=>{co
 /* padrón del C.S. (nombres, DNI, nacimiento, HC) guardado en la nube con acceso restringido */
 let PADRON=[];
 function padLabel(x){return [x.d?'DNI '+x.d:'',x.b?toDMY(x.b):'',x.h?'HC '+x.h:'',x.xc?'Dx ref.: '+x.xc:'','padrón C.S.'].filter(Boolean).join(' · ')}
-function padDxShow(){const el=$('#padDx');if(!el)return;const x=F.nombre?padFind(F):null;if(!x||!x.xc){el.classList.add('hide');return}const c=x.xc==='Sano'?'var(--ok)':x.xc==='Caries'?'var(--err)':x.xc.startsWith('Urg')?'var(--err)':'var(--tx2)';el.innerHTML='<b style="color:'+c+'">Diagnóstico referencial (padrón C.S. 2026): '+esc(x.xc)+'</b>'+(x.x&&x.x!==x.xc.toUpperCase()?' · <span>'+esc(x.x)+'</span>':'')+'<br><span class="muted">Solo como orientación: el odontograma de hoy es el que cuenta.</span>';el.classList.remove('hide')}
+function padDxShow(){const st=$('#padSt');if(st){const x0=F.nombre?padFind(F):null;const v=x0&&x0.xc?(x0.xc.startsWith('Urg')?'Caries (urgencia)':x0.xc):'—';st.textContent=v;st.style.color=v==='Sano'?'var(--ok)':v.startsWith('Caries')?'var(--err)':'var(--tx2)';$('#padStD').textContent=x0&&x0.x&&x0.x!==(x0.xc||'').toUpperCase()?x0.x:(x0?'':'sin datos en el padrón')}
+  const el=$('#padDx');if(!el)return;const x=F.nombre?padFind(F):null;if(!x||!x.xc){el.classList.add('hide');return}const c=x.xc==='Sano'?'var(--ok)':x.xc==='Caries'?'var(--err)':x.xc.startsWith('Urg')?'var(--err)':'var(--tx2)';el.classList.add('hide');return;el.innerHTML='<b style="color:'+c+'">Diagnóstico referencial (padrón C.S. 2026): '+esc(x.xc)+'</b>'+(x.x&&x.x!==x.xc.toUpperCase()?' · <span>'+esc(x.x)+'</span>':'')+'<br><span class="muted">Solo como orientación: el odontograma de hoy es el que cuenta.</span>';el.classList.remove('hide')}
 function searchPeople(raw,flt){
   const q=norm(raw),dig=String(raw||'').replace(/\D/g,'');const isNum=/^\d{3,}$/.test(String(raw||'').trim());
   const toks=q.split(' ').filter(Boolean);const out=[];
@@ -1410,10 +1412,10 @@ function attachSuggest(inp,box,onPick,flt){
 function padFind(r){if(!PADRON.length||!r)return null;const d=String(r.dni||'').replace(/\D/g,'');if(d.length===8){const x=PADRON.find(p=>p.d===d);if(x)return x}
   const n=norm(r.nombre);if(!n)return null;const L=PADRON.filter(p=>(p._n||(p._n=norm(p.n)))===n);if(L.length===1)return L[0];if(L.length>1&&r.nac){const M=L.filter(p=>p.b===r.nac);if(M.length===1)return M[0]}return null}
 function padComplete(t,odo){const x=padFind(t);if(!x)return false;let ch=false;const set=(k,v)=>{if(v&&!t[k]){t[k]=v;ch=true}};
-  set('hc',x.h);set('sexo',x.s);if(odo){set('dni',x.d);set('nac',x.b);set('dir',x.a)}return ch}
+  set('hc',String(x.h||'').replace(/[.\s]+$/,''));set('sexo',x.s);if(odo){set('dni',x.d);set('nac',x.b);set('dir',x.a)}return ch}
 function padFill(x,target){
   const edad=x.b?ageOf(x.b,target.fecha||today()):null;
-  return{nombre:x.n,dni:x.d||'',nac:x.b||'',hc:x.h||'',sexo:x.s||'',dir:x.a||'',edad:edad!=null&&edad>=0?String(edad):'',msg:'Datos del padrón del C.S.: '+padLabel(x)}}
+  return{nombre:x.n,dni:x.d||'',nac:x.b||'',hc:String(x.h||'').replace(/[.\s]+$/,''),sexo:x.s||'',dir:x.a||'',edad:edad!=null&&edad>=0?String(edad):'',msg:'Datos del padrón del C.S.: '+padLabel(x)}}
 function pickOdo(n,it){
   if(it&&it.kind==='pad'&&!personProfile(it.x.n)){const P=padFill(it.x,F);F.nombre=P.nombre;for(const k of['dni','nac','hc','sexo','dir']){if(P[k]&&!F[k])F[k]=P[k]}if(P.edad)F.edad=P.edad;if(!F.touched)F.pos=blankPos(F.dent,F.edad);persist();fillForm();const m=$('#prefMsg');m.textContent=P.msg;m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),6000);return}
   F.nombre=n;$('#fNom').value=n;persist();prefill()}
