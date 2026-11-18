@@ -118,7 +118,7 @@ table.t td:last-child{text-align:right;font-weight:600}
       <label class="f">DNI (opcional)<input id="fDni" inputmode="numeric" maxlength="8" autocomplete="off"></label>
       <label class="f">SIS (opcional)<input id="fSis" autocomplete="off"></label>
       <label class="f" style="grid-column:1/-1">Dirección<input id="fDir" autocomplete="off"></label>
-      <label class="f">Colegio<input id="fCol" autocomplete="off"></label>
+      <label class="f">Colegio<select id="fColS"><option value="">—</option><option>I.E. Dos de Mayo</option><option value="__otro">Otro…</option></select><input id="fCol" class="hide" autocomplete="off" placeholder="Nombre del colegio o grupo" style="margin-top:6px"></label>
       <label class="f">Dentición<select id="fDent"><option value="P">Permanente</option><option value="M">Mixta</option><option value="D">Decidua</option></select></label>
     </div>
     <div id="prefMsg" class="msg ok hide"></div>
@@ -201,7 +201,7 @@ table.t td:last-child{text-align:right;font-weight:600}
       <label class="f">Sexo<select id="cSexo"><option value="">—</option><option>Femenino</option><option>Masculino</option></select></label>
       <label class="f">Grado y sección<select id="cGrado"></select></label>
       <label class="f hide" id="cInstrW"><span id="cInstrL">Grado de instrucción</span><select id="cInstr"></select></label>
-      <label class="f">Colegio / grupo<input id="cCol" autocomplete="off"></label>
+      <label class="f">Colegio / grupo<select id="cColS"><option value="">—</option><option>I.E. Dos de Mayo</option><option value="__otro">Otro…</option></select><input id="cCol" class="hide" autocomplete="off" placeholder="Nombre del colegio o grupo" style="margin-top:6px"></label>
       <label class="f">Toma del CAPSO<select id="cToma"></select></label>
       <label class="f">Fecha<input id="cFecha" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" autocomplete="off"></label>
     </div>
@@ -497,7 +497,7 @@ function renderIHO(){
 /* ---------- formulario ---------- */
 const sel=$('#fGrado');sel.innerHTML='<option value="">—</option>'+GRADOS.map(g=>'<option>'+g+'</option>').join('');
 function fillForm(){
-  if(!F.est)F.est=estBlank();if(F.colegio==null)F.colegio='';$('#fNom').value=F.nombre;$('#fNac').value=toDMY(F.nac);$('#fDni').value=F.dni||'';$('#fSis').value=F.sis||'';$('#fDir').value=F.dir||'';$('#fCol').value=F.colegio||'';$('#fEdad').value=F.edad;edadHint();renderEst();$('#fSexo').value=F.sexo;$('#fGrado').value=F.grado;$('#fTipo').value=F.tipo;$('#fFecha').value=toDMY(F.fecha);$('#fDent').value=F.dent;$('#fObs').value=F.obs;
+  if(!F.est)F.est=estBlank();if(F.colegio==null)F.colegio='';$('#fNom').value=F.nombre;$('#fNac').value=toDMY(F.nac);$('#fDni').value=F.dni||'';$('#fSis').value=F.sis||'';$('#fDir').value=F.dir||'';$('#fCol').value=F.colegio||'';delete $('#fColS').dataset.otro;colSync('f');$('#fEdad').value=F.edad;edadHint();renderEst();$('#fSexo').value=F.sexo;$('#fGrado').value=F.grado;$('#fTipo').value=F.tipo;$('#fFecha').value=toDMY(F.fecha);$('#fDent').value=F.dent;$('#fObs').value=F.obs;
   $('#ftitle').textContent=F.id?'Editando registro':'Datos del paciente';
   $('#bSave').textContent=F.id?'Guardar cambios':'Guardar registro';
   toggleCtrl();render();
@@ -516,7 +516,11 @@ dateMask($('#fNac'),iso=>{F.nac=iso;setAge()});
 $('#fDni').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'');F.dni=e.target.value;persist()};
 $('#fSis').oninput=e=>{F.sis=e.target.value;persist()};
 $('#fDir').oninput=e=>{F.dir=e.target.value;persist()};
-$('#fCol').oninput=e=>{F.colegio=e.target.value;persist()};
+function colSync(p){const v=$('#'+p+'Col').value;const S=$('#'+p+'ColS');const known=v===''||v==='I.E. Dos de Mayo';if(known&&!S.dataset.otro){S.value=v;$('#'+p+'Col').classList.add('hide')}else{S.value='__otro';$('#'+p+'Col').classList.remove('hide')}}
+function colBind(p,setv){const S=$('#'+p+'ColS'),T=$('#'+p+'Col');
+  S.onchange=()=>{if(S.value==='__otro'){S.dataset.otro='1';T.classList.remove('hide');if(T.value==='I.E. Dos de Mayo')T.value='';setv(T.value);T.focus()}else{delete S.dataset.otro;T.value=S.value;T.classList.add('hide');setv(S.value)}};
+  T.oninput=()=>setv(T.value)}
+colBind('f',v=>{F.colegio=v;persist()});
 function renderEst(){
   const box=$('#est');box.innerHTML='';
   EST.forEach(k=>{
@@ -529,7 +533,7 @@ function renderEst(){
     r.append(seg,inp);box.appendChild(r);
   });
 }
-$('#fGrado').onchange=e=>{F.grado=e.target.value;if(/^comunidad/i.test(F.grado)&&F.colegio==='I.E. Dos de Mayo'){F.colegio='';$('#fCol').value=''}persist()};
+$('#fGrado').onchange=e=>{F.grado=e.target.value;if(/^comunidad/i.test(F.grado)&&F.colegio==='I.E. Dos de Mayo'){F.colegio='';$('#fCol').value='';colSync('f')}persist()};
 dateMask($('#fFecha'),iso=>{F.fecha=iso;setAge()});
 $('#fObs').oninput=e=>{F.obs=e.target.value;persist()};
 $('#fTipo').onchange=e=>{F.tipo=e.target.value;toggleCtrl();persist();prefill()};
@@ -1074,7 +1078,7 @@ $('#cInstr').onchange=e=>{G.instr=e.target.value;capPersist()};
 $('#cToma').innerHTML=CAP_TOMAS.map(t=>'<option>'+t+'</option>').join('');
 let capMissShow=false,capConfirm=null;
 function capFill(){
-  $('#cNom').value=G.nombre;$('#cEdad').value=G.edad;$('#cSexo').value=G.sexo;$('#cGrado').value=G.grado;$('#cInstr').value=G.instr||'';$('#cApod').value=G.apod||'';capInstrShow();$('#cCol').value=G.colegio||'';$('#cToma').value=G.toma;$('#cFecha').value=toDMY(G.fecha);
+  $('#cNom').value=G.nombre;$('#cEdad').value=G.edad;$('#cSexo').value=G.sexo;$('#cGrado').value=G.grado;$('#cInstr').value=G.instr||'';$('#cApod').value=G.apod||'';capInstrShow();$('#cCol').value=G.colegio||'';delete $('#cColS').dataset.otro;colSync('c');$('#cToma').value=G.toma;$('#cFecha').value=toDMY(G.fecha);
   $('#capTitle').textContent=G.id?'Editando CAPSO':'CAPSO · datos de la persona';$('#capSave').textContent=G.id?'Guardar cambios':'Guardar CAPSO';
   capPersist();capRender();
 }
@@ -1160,8 +1164,8 @@ $('#cNom').oninput=e=>{G.nombre=e.target.value;capPersist();if(isKnownName(G.nom
 $('#cNom').onchange=()=>capPrefill();
 $('#cEdad').oninput=e=>{G.edad=e.target.value;capInstrShow();capPersist()};
 $('#cSexo').onchange=e=>{G.sexo=e.target.value;capPersist()};
-$('#cGrado').onchange=e=>{G.grado=e.target.value;if(/^comunidad/i.test(G.grado)&&G.colegio==='I.E. Dos de Mayo'){G.colegio='';$('#cCol').value=''}if(!capCom())G.instr='';capInstrShow();capPersist()};
-$('#cCol').oninput=e=>{G.colegio=e.target.value;capPersist()};
+$('#cGrado').onchange=e=>{G.grado=e.target.value;if(/^comunidad/i.test(G.grado)&&G.colegio==='I.E. Dos de Mayo'){G.colegio='';$('#cCol').value='';colSync('c')}if(!capCom())G.instr='';capInstrShow();capPersist()};
+colBind('c',v=>{G.colegio=v;capPersist()});
 $('#cToma').onchange=e=>{G.toma=e.target.value;capPersist()};
 dateMask($('#cFecha'),iso=>{G.fecha=iso;capPersist()});
 function capPrefill(){
