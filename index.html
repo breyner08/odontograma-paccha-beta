@@ -511,6 +511,7 @@ function renderIHO(){
 /* ---------- formulario ---------- */
 const sel=$('#fGrado');sel.innerHTML='<option value="">—</option>'+GRADOS.map(g=>'<option>'+g+'</option>').join('');
 function fillForm(){
+  if(F.nombre&&padComplete(F,true))persist();
   if(!F.est)F.est=estBlank();if(F.colegio==null)F.colegio='';$('#fNom').value=F.nombre;$('#fNac').value=toDMY(F.nac);$('#fDni').value=F.dni||'';$('#fSis').value=F.sis||'';$('#fHc').value=F.hc||'';$('#fDir').value=F.dir||'';$('#fCol').value=F.colegio||'';delete $('#fColS').dataset.otro;colSync('f');$('#fEdad').value=F.edad;edadHint();renderEst();$('#fSexo').value=F.sexo;$('#fGrado').value=F.grado;$('#fTipo').value=F.tipo;$('#fFecha').value=toDMY(F.fecha);$('#fDent').value=F.dent;$('#fObs').value=F.obs;
   $('#ftitle').textContent=F.id?'Editando registro':'Datos del paciente';
   $('#bSave').textContent=F.id?'Guardar cambios':'Guardar registro';
@@ -527,7 +528,7 @@ function ageYMD(nac,fecha){if(!nac||!fecha)return null;const [y1,m1,d1]=nac.spli
 function edadHint(){const h=$('#edadHint'),y=ageOf(F.nac,F.fecha);$('#fEdad').readOnly=false;h.style.fontSize='12px';h.style.fontWeight='400';h.style.color='var(--tx2)';if(y==null){h.textContent=F.nac?'':'Escríbela si no recuerda su fecha de nacimiento';return}if(y<0||y>110){h.textContent='Revisa la fecha de nacimiento';h.style.color='var(--warn)';return}if(String(y)!==String(F.edad)){h.textContent='No coincide con la fecha de nacimiento ('+ageYMD(F.nac,F.fecha)+')';h.style.color='var(--warn)';return}h.textContent=ageYMD(F.nac,F.fecha);h.style.fontSize='13px';h.style.fontWeight='600'}
 function setAge(){const y=ageOf(F.nac,F.fecha);if(y!=null&&y>=0&&y<=110){F.edad=String(y);$('#fEdad').value=F.edad;F.edadYMD=ageYMD(F.nac,F.fecha)||'';if(!F.touched)F.pos=blankPos(F.dent,F.edad)}edadHint();persist();render()}
 dateMask($('#fNac'),iso=>{F.nac=iso;setAge()});
-$('#fDni').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'');F.dni=e.target.value;persist()};
+$('#fDni').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'');F.dni=e.target.value;persist();if(F.dni.length===8&&padComplete(F,true)){persist();fillForm()}};
 $('#fSis').oninput=e=>{F.sis=e.target.value;persist()};
 $('#fHc').oninput=e=>{F.hc=e.target.value;persist()};
 $('#fDir').oninput=e=>{F.dir=e.target.value;persist()};
@@ -1404,6 +1405,10 @@ function attachSuggest(inp,box,onPick,flt){
     box.classList.remove('hide')};
   inp.addEventListener('input',open);inp.addEventListener('focus',open);inp.addEventListener('blur',()=>setTimeout(close,150));
 }
+function padFind(r){if(!PADRON.length||!r)return null;const d=String(r.dni||'').replace(/\D/g,'');if(d.length===8){const x=PADRON.find(p=>p.d===d);if(x)return x}
+  const n=norm(r.nombre);if(!n)return null;const L=PADRON.filter(p=>(p._n||(p._n=norm(p.n)))===n);if(L.length===1)return L[0];if(L.length>1&&r.nac){const M=L.filter(p=>p.b===r.nac);if(M.length===1)return M[0]}return null}
+function padComplete(t,odo){const x=padFind(t);if(!x)return false;let ch=false;const set=(k,v)=>{if(v&&!t[k]){t[k]=v;ch=true}};
+  set('hc',x.h);set('sexo',x.s);if(odo){set('dni',x.d);set('nac',x.b);set('dir',x.a)}return ch}
 function padFill(x,target){
   const edad=x.b?ageOf(x.b,target.fecha||today()):null;
   return{nombre:x.n,dni:x.d||'',nac:x.b||'',hc:x.h||'',sexo:x.s||'',dir:x.a||'',edad:edad!=null&&edad>=0?String(edad):'',msg:'Datos del padrón del C.S.: '+padLabel(x)}}
@@ -1476,7 +1481,7 @@ onAuthStateChanged(auth,u=>{
   if(!u){db=null;$('#login').classList.remove('hide');$('#lgEmail').value=ALLOWED_EMAIL||'';updatePill();return}
   $('#login').classList.add('hide');
   db=fsdb;dbState=navigator.onLine?'connecting':'offline';
-  unsubP=db.collection('padron').onSnapshot(snap=>{const ch=[];let meta=null;snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==='meta')meta=v;else if(Array.isArray(v.items))ch.push([d.id,v.items])});ch.sort((a,b)=>a[0].localeCompare(b[0]));PADRON=ch.flatMap(c=>c[1]);padInfo(meta)},()=>{});
+  unsubP=db.collection('padron').onSnapshot(snap=>{const ch=[];let meta=null;snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==='meta')meta=v;else if(Array.isArray(v.items))ch.push([d.id,v.items])});ch.sort((a,b)=>a[0].localeCompare(b[0]));PADRON=ch.flatMap(c=>c[1]);padInfo(meta);if(F.nombre&&!F.hc&&padComplete(F,true)){persist();fillForm()}},()=>{});
   unsubC=db.collection(COL_C).onSnapshot(snap=>{const m={};snap.docs.forEach(d=>{const v=d.data();if(v)m[d.id]=v});capRemote=m;LS.set(LSP+'capcache',capRemote);updatePill();if(window.__capRefresh)window.__capRefresh()},err=>{});
   unsub=db.collection(COL_R).onSnapshot(snap=>{
     const m={};snap.docs.forEach(d=>{const v=d.data();if(v)m[d.id]=v});
