@@ -90,6 +90,7 @@ table.t td:last-child{text-align:right;font-weight:600}
 .capi{padding:10px 0;border-top:1px solid var(--bd)}.capi:first-of-type{border-top:0}.capi .qt{font-weight:600;font-size:14px;margin-bottom:2px}.capi .qh{font-size:12px;color:var(--tx2);margin-bottom:6px}.capi.miss .qt{color:var(--warn)}
 .rt{width:100%;border-collapse:collapse;font-size:13px}.rt th,.rt td{padding:5px 6px;border:1px solid var(--bd);text-align:center}.rt th{background:var(--bg);font-weight:600}.rt td:first-child,.rt th:first-child{text-align:left}.rt tr.tot td{font-weight:700;background:var(--acs)}.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}.kpisvg{max-height:230px}#resBody svg{max-height:230px}.rh{font-size:14px;font-weight:700;margin:14px 0 6px}.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.kpi div{background:var(--bg);border-radius:8px;padding:8px 10px}.kpi b{display:block;font-size:19px}
 .sug{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:15;background:var(--card);border:1px solid var(--bd2);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:260px;overflow:auto;-webkit-overflow-scrolling:touch}.sug button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--bd);background:none;color:var(--tx);padding:10px 12px;font-size:15px}.sug button:last-child{border-bottom:0}.sug button small{display:block;color:var(--tx2);font-size:12px;margin-top:2px}.sug button:active{background:var(--acs)}
+.prog{flex-basis:100%;display:grid;grid-template-columns:1fr 1fr;gap:12px}.pg .pgl{display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:3px}.pg .pgl b{color:var(--tx)}.bar{height:8px;border-radius:99px;background:var(--bg);overflow:hidden;border:1px solid var(--bd)}.bar i{display:block;height:100%;width:0;background:var(--ac);border-radius:99px;transition:width .4s}.bar i.done{background:var(--c6)}
 .savebar{position:sticky;bottom:0;padding-bottom:max(10px,env(safe-area-inset-bottom))!important;background:var(--card);border-top:1px solid var(--bd);padding:10px 12px;display:flex;gap:8px;justify-content:flex-end;z-index:4;margin:0 -12px}
 </style>
 </head>
@@ -98,6 +99,7 @@ table.t td:last-child{text-align:right;font-weight:600}
   <h1>Odontograma CPOD/ceod · Paccha 2026 <span style="font-size:11px;font-weight:500;color:var(--tx2);border:1px solid var(--bd2);border-radius:99px;padding:1px 7px;vertical-align:middle"><span id="verLbl">v2.0</span></span></h1>
   <span id="pill" class="pill warn">Conectando…</span>
   <div class="tabs"><button id="tabN" class="on">Odontograma</button><button id="tabC">CAPSO</button><button id="tabL">Registros (<span id="nreg">0</span>)</button><button id="tabR">Resumen</button></div>
+  <div class="prog" id="prog"><div class="pg"><div class="pgl"><span>Odontogramas</span><b id="pgO">0/200</b></div><div class="bar"><i id="pgOb"></i></div></div><div class="pg"><div class="pgl"><span>CAPSO</span><b id="pgC">0/200</b></div><div class="bar"><i id="pgCb"></i></div></div></div>
 </header>
 
 <main>
@@ -609,7 +611,14 @@ window.addEventListener('online',()=>flush());window.addEventListener('offline',
 
 /* ---------- lista ---------- */
 let delArm=null;
+const META=200;
+function renderProg(){
+  const o=allRecords().filter(r=>r.tipo==='Diagnóstico'),c=allCapso().filter(r=>r.toma===CAP_TOMAS[0]);
+  const no=new Set(o.map(r=>norm(r.nombre))).size,nc=new Set(c.map(r=>norm(r.nombre))).size;
+  [['O',no],['C',nc]].forEach(([k,n])=>{$('#pg'+k).textContent=n+'/'+META+(n>=META?' ✓':'');const b=$('#pg'+k+'b');b.style.width=Math.min(100,n/META*100)+'%';b.classList.toggle('done',n>=META)});
+}
 function renderList(){
+  try{renderProg()}catch(e){}
   const all=allRecords().sort((a,b)=>(b.actualizado||0)-(a.actualizado||0));
   const capAll=allCapso();$('#nreg').textContent=all.length+capAll.length;$('#nO').textContent=all.length;
   $('#names2').innerHTML=[...new Set([...all,...capAll].map(r=>r.nombre))].map(n=>'<option value="'+esc(n)+'">').join('');
