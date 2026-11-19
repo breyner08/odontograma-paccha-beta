@@ -138,17 +138,17 @@ export default {
     if (!imgs.length || imgs.some(i => !/^image\/(jpeg|png|webp)$/.test(i.media_type) || typeof i.data !== "string")) return json({ error: "Falta la foto" }, 400, origin);
 
     const content = imgs.map(i => ({ type: "image", source: { type: "base64", media_type: i.media_type, data: i.data } }));
-    content.push({ type: "text", text: "Transcribe esta ficha con la herramienta registrar_ficha." });
+    content.push({ type: "text", text: "Transcribe esta ficha." });
 
+    const strict = o => { if (o && o.type === "object") { o.additionalProperties = false; Object.values(o.properties || {}).forEach(strict); } if (o && o.items) strict(o.items); return o; };
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
         model: env.MODEL || MODEL,
-        max_tokens: 4096,
+        max_tokens: 16000,
         system: PROMPT,
-        tools: [{ name: "registrar_ficha", description: "Registra los datos transcritos de la ficha", input_schema: SCHEMA }],
-        tool_choice: { type: "tool", name: "registrar_ficha" },
+        output_config: { effort: "medium", format: { type: "json_schema", schema: strict(JSON.parse(JSON.stringify(SCHEMA))) } },
         messages: [{ role: "user", content }]
       })
     });
@@ -158,8 +158,10 @@ export default {
       const hint = r.status === 401 ? "La clave de Anthropic no es válida." : r.status === 400 && /credit/i.test(msg) ? "No hay saldo en la cuenta de Anthropic." : r.status === 429 ? "Demasiadas solicitudes; espera un momento." : r.status === 529 ? "El servicio está saturado; intenta de nuevo." : msg;
       return json({ error: hint }, 502, origin);
     }
-    const tu = (out.content || []).find(c => c.type === "tool_use");
-    if (!tu) return json({ error: "No se pudo leer la ficha" }, 502, origin);
-    return json({ ok: true, data: tu.input, uso: out.usage || null }, 200, origin);
+    const txt = (out.content || []).filter(c => c.type === "text").map(c => c.text).join("");
+    let data = null;
+    try { data = JSON.parse(txt); } catch (e) { data = null; }
+    if (!data) return json({ error: out.stop_reason === "max_tokens" ? "La respuesta quedó incompleta; intenta de nuevo." : "No se pudo leer la ficha" }, 502, origin);
+    return json({ ok: true, data, uso: out.usage || null }, 200, origin);
   }
 };
