@@ -206,7 +206,7 @@ table.t td:last-child{text-align:right;font-weight:600}
     <div id="cScanMsg" class="msg hide" style="margin:0 0 10px"></div>
     <div style="margin:0 0 10px"><button class="btn sm" id="bCDict">🎙 Dictar CAPSO</button></div>
     <div id="cDictBox" class="hide" style="margin:0 0 12px;border:1px solid var(--bd);border-radius:10px;padding:10px">
-      <div class="muted" style="font-size:12px;margin-bottom:6px">Dicta o escribe. Ejemplo: «paciente Luis Nima Cáceres, DNI 76543210, 14 años, masculino, tercero A del colegio Dos de Mayo, CAPSO 1, el día de hoy. Pregunta 1: dulces, gaseosa, galletas porque pican los dientes. Pregunta 2: … Pregunta 6 punto 1: … Pregunta 17: de acuerdo…». Funciona sin internet con el micrófono del teclado; di «coma» para separar los alimentos.</div>
+      <div class="muted" style="font-size:12px;margin-bottom:6px">Dicta o escribe. Ejemplo: «paciente Luis Nima Cáceres, DNI 76543210, 14 años, masculino, tercero A del colegio Dos de Mayo, CAPSO 1, el día de hoy. Pregunta 1: dulces, gaseosa, galletas porque pican los dientes. Pregunta 2: … Pregunta 6 punto 1: … Pregunta 17: sí…». En 17–24: «sí» = de acuerdo, «no sabe» = ni de acuerdo ni en desacuerdo, «no» = en desacuerdo. Si en cualquier pregunta dices «no sabe», se toma como desconocimiento. Funciona sin internet con el micrófono del teclado; di «coma» para separar los alimentos.</div>
       <textarea id="cDict" rows="6" style="width:100%" placeholder="Toca aquí y usa el micrófono del teclado, o el botón Escuchar"></textarea>
       <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm hide" id="bCListen">🎙 Escuchar</button><button class="btn sm pri" id="bCDictGo">Llenar el CAPSO</button><button class="btn sm" id="bCDictClr">Borrar texto</button></div>
       <div id="cDictMsg" class="msg hide"></div>
@@ -1064,18 +1064,19 @@ const COMP={
 };
 function compEval(key,text,ovp){const c=COMP[key];const t=NZ(text);const det=c.parts.map(([lab,kw],i)=>{const o=ovp&&ovp[i];return o!=null?o:hasAny(t,kw)});const ok=c.all?det.every(Boolean):det.some(Boolean);return{det,v:ok?c.yes:c.no}}
 function capNormRaw(raw){if(raw&&!raw.legacy&&raw.ovr&&Object.keys(raw.ovr).length>=20){raw.legacy=raw.ovr;raw.ovr={}}return raw}
+const NSB=t=>/^ (no sabe|no se|no sabia|no recuerda|no recuerdo|no conoce|desconoce|no responde|no contesta|ns) $/.test(NZ(t||''));
 function capDerive(raw){
   capNormRaw(raw);
   const A=raw.a||{},O=raw.ovr||{},L=raw.legacy||{},R={},why={},st={};
   const set=(k,v,w,s)=>{if(O[k]!=null){R[k]=O[k];st[k]='manual';why[k]=w||''}else if(v==null&&L[k]!=null&&s!=='revisar'){R[k]=L[k];st[k]='anterior';why[k]='registrado en la versión anterior (sin respuesta escrita)'}else{R[k]=v;st[k]=v==null?(s||'falta'):(s||'auto');why[k]=w||''}};
   // P1 alimentos que dañan
-  {const it=(raw.f1||[]);if(!it.length)set('p5',null,'');else{const cl=it.map(x=>({x,...foodClass(x)}));const non=cl.filter(c=>c.c===false),unk=cl.filter(c=>c.c==null);
+  {const it=(raw.f1||[]);if(!it.length)set('p5',A.q1ns?'No sabe':null,A.q1ns?'respondió «no sabe»':'');else{const cl=it.map(x=>({x,...foodClass(x)}));const non=cl.filter(c=>c.c===false),unk=cl.filter(c=>c.c==null);
     if(non.length)set('p5','No sabe','No cariogénico: '+non.map(c=>c.x).join(', '));else if(unk.length)set('p5',null,'Clasifica: '+unk.map(c=>c.x).join(', '),'revisar');else set('p5','Sabe','Todos cariogénicos ('+it.length+')')}}
   // P2
   {const tx=A.q2||'';if(!tx.trim())set('p6',null);else{const e=compEval('p6',tx,(raw.cp||{}).p6);set('p6',e.v,COMP.p6.parts.map((p,i)=>(e.det[i]?'✓ ':'✗ ')+p[0]).join(' · '))}}
   {const tx=A.q3||'';if(!tx.trim())set('p7',null);else{const e=compEval('p7',tx,(raw.cp||{}).p7);set('p7',e.v,COMP.p7.parts.map((p,i)=>(e.det[i]?'✓ ':'✗ ')+p[0]).join(' · '))}}
-  {const m=parseMonths(A.q4);if(m==null)set('p8',null,A.q4?'No entendí el tiempo; elige manualmente':'',A.q4?'revisar':'falta');else set('p8',m===6?'Sabe':'No sabe','≈ '+m+' meses')}
-  {const t=NZ(A.q5||'');if(!t.trim())set('p9',null);else{let m=null;if(/nacer|recien nacido|primer diente|primeros dientes|antes del ano|antes del primer ano|=bebe/.test(t)||/ bebe /.test(t))m=6;else m=parseMonths(A.q5);
+  {const m=parseMonths(A.q4);if(NSB(A.q4))set('p8','No sabe','respondió «no sabe»');else if(m==null)set('p8',null,A.q4?'No entendí el tiempo; elige manualmente':'',A.q4?'revisar':'falta');else set('p8',m===6?'Sabe':'No sabe','≈ '+m+' meses')}
+  {const t=NZ(A.q5||'');if(!t.trim())set('p9',null);else if(NSB(A.q5))set('p9','No sabe','respondió «no sabe»');else{let m=null;if(/nacer|recien nacido|primer diente|primeros dientes|antes del ano|antes del primer ano|=bebe/.test(t)||/ bebe /.test(t))m=6;else m=parseMonths(A.q5);
     if(m==null)set('p9',null,'No entendí la edad; elige manualmente','revisar');else set('p9',m<12?'Sabe':'No sabe',m<12?'antes del primer año':'≈ '+(m>=12?(Math.round(m/12*10)/10)+' años':m+' meses'))}}
   set('p10',A.q6||null);
   if(A.q6==='No'){['p10.1','p10.2','p10.3'].forEach(k=>set(k,'No sabe','no sabe qué es el flúor'))}
@@ -1090,11 +1091,11 @@ function capDerive(raw){
   {const t=NZ(A.q101||'');const cp=(raw.cp||{});
     if(!t.trim()&&cp.p131==null)set('p13.1',null);else{const v=cp.p131!=null?cp.p131:(/cada comida|despues de comer|despues de cada|luego de cada|despues de las comidas/.test(t)||(/desayun/.test(t)&&/almuerz/.test(t)&&/cena|comida de la noche/.test(t)));set('p13.1',v?'Sí':'No')}
     if(!t.trim()&&cp.p132==null)set('p13.2',null);else{const v=cp.p132!=null?cp.p132:/dormir|acostar|=noche|en la noche|por la noche|antes de la cama/.test(t)||/ noche /.test(t);set('p13.2',v?'Sí':'No')}}
-  {const t=NZ(A.q11||'');if(!t.trim())set('p14',null);else if(/nunca|no ha ido|no fue|no he ido|no recuerd/.test(t))set('p14','Más de 6 meses','nunca o no recuerda');else{const m=parseMonths(A.q11);if(m==null)set('p14',null,'No entendí el tiempo; elige manualmente','revisar');else set('p14',m<=6?'Menos de 6 meses':'Más de 6 meses','≈ '+m+' meses')}}
+  {const t=NZ(A.q11||'');if(!t.trim())set('p14',null);else if(NSB(A.q11))set('p14','Más de 6 meses','respondió «no sabe»');else if(/nunca|no ha ido|no fue|no he ido|no recuerd/.test(t))set('p14','Más de 6 meses','nunca o no recuerda');else{const m=parseMonths(A.q11);if(m==null)set('p14',null,'No entendí el tiempo; elige manualmente','revisar');else set('p14',m<=6?'Menos de 6 meses':'Más de 6 meses','≈ '+m+' meses')}}
   {const tx=A.q12||'';if(!tx.trim())set('p15',null);else{const e=compEval('p15',tx,(raw.cp||{}).p15);set('p15',e.v,e.det[0]?'busca solución profesional':'no menciona ir al dentista')}}
-  {const t=NZ(A.q13||'');if(!t.trim())set('p16',null);else if(/^ (nada|ninguno|ninguna|no|no usa|no uso|ningun) $/.test(t))set('p16','No','no usa remedios caseros');else set('p16','Sí','usa: '+A.q13.trim())}
+  {const t=NZ(A.q13||'');if(!t.trim())set('p16',null);else if(NSB(A.q13))set('p16','No','respondió «no sabe»');else if(/^ (nada|ninguno|ninguna|no|no usa|no uso|ningun) $/.test(t))set('p16','No','no usa remedios caseros');else set('p16','Sí','usa: '+A.q13.trim())}
   R['p16.1']=A.q13&&R.p16==='Sí'?A.q13.trim():'';
-  {const brand=A.q14||'';const t=NZ(brand);let fl=raw.salFl;if(fl==null&&t.trim())fl=/emsal|quimpac|fluor/.test(t)?true:(/no tiene|no mostro|no hay|sin sal/.test(t)?false:null);
+  {const brand=A.q14||'';const t=NZ(brand);let fl=raw.salFl;if(fl==null&&NSB(brand))fl=false;if(fl==null&&t.trim())fl=/emsal|quimpac|fluor/.test(t)?true:(/no tiene|no mostro|no hay|sin sal/.test(t)?false:null);
     if(!t.trim()&&fl==null)set('p17',null);else if(fl==null)set('p17',null,'¿El paquete dice flúor? Márcalo abajo','revisar');else set('p17',fl?'Consume':'No consume',fl?'sal fluorurada':'sal sin flúor')}
   {const tx=A.q16||'';if(!tx.trim())set('p18',null);else{const e=compEval('p18',tx,(raw.cp||{}).p18);set('p18',e.v,e.det[0]?'elige por el flúor':'no menciona el flúor')}}
   CAP_ACT.forEach(k=>set(k,(raw.lik||{})[k]||null));
@@ -1825,7 +1826,7 @@ function dictFoods(t){let it=splitItems(t.replace(/\s+coma\s+/gi,', '));
     multi.forEach(mw=>{if(rest.includes(' '+mw+' ')){out.push(mw);rest=rest.replace(' '+mw+' ',' ')}});it=out.concat(rest.trim().split(/\s+/).filter(w=>w.length>2&&!['los','las','con','del','que','muy'].includes(w)))}
   return it}
 function dictYN(t){const x=' '+norm(t)+' ';if(/^ (si|sí)\b/.test(x)||/ si /.test(x.slice(0,6)))return'Sí';if(/^ no\b/.test(x))return'No';if(/ (si|sí) /.test(x))return'Sí';if(/ no /.test(x))return'No';return''}
-function dictLik(t){const x=norm(t);if(/ni de acuerdo|ni en desacuerdo|indiferente|neutral|mas o menos|regular/.test(x))return'Ni de acuerdo ni en desacuerdo';if(/desacuerdo|no esta de acuerdo|no estoy de acuerdo|no de acuerdo/.test(x))return'En desacuerdo';if(/de acuerdo|acuerdo|^si\b/.test(x))return'De acuerdo';return''}
+function dictLik(t){const x=norm(t).replace(/deacuerdo/g,'de acuerdo').replace(/[.,;:!]/g,' ').replace(/\s+/g,' ').trim();if(/^no se\b|^no sabe\b/.test(x))return'Ni de acuerdo ni en desacuerdo';if(/ni de acuerdo|ni en desacuerdo|indiferente|neutral|mas o menos|regular/.test(x))return'Ni de acuerdo ni en desacuerdo';if(/desacuerdo|no esta de acuerdo|no estoy de acuerdo|no de acuerdo/.test(x)||/^no\b/.test(x))return'En desacuerdo';if(/de acuerdo|acuerdo|^si\b/.test(x))return'De acuerdo';return''}
 function dictHead(h,g,got){
   const H=' '+h.replace(/\s+/g,' ')+' ',N=' '+norm(h).replace(/[^a-z0-9ñ/ ]/g,' ').replace(/\s+/g,' ')+' ';
   const stop='(?=\\s+(?:en\\s+(?:el\\s+)?(?:primer[oa]?|segundo|tercer[oa]?|cuarto|quinto|[1-5])|en\\s+(?:el\\s+)?colegio|en\\s+la\\s+comunidad|con|dni|de\\s+\\d+|\\d+|edad|domicilio|direcci|vive|en\\s+(?:el\\s+)?grado|grado|del\\s+colegio|colegio|comunidad|tomando|capso|sexo|masculino|femenino|var[oó]n|mujer|hombre|apoderad|el\\s+d[ií]a|fecha)\\b|[,.;:]|$)';
@@ -1856,11 +1857,14 @@ function dictApply(text){
   const TXT={'2':'q2','2.1':'q21','3':'q3','4':'q4','5':'q5','6.1':'q61','6.2':'q62','6.3':'q63','8':'q8','9':'q9','10.1':'q101','11':'q11','11.1':'q111','11.2':'q112','12':'q12','13':'q13','15.1':'q151','16':'q16'};
   Object.entries(seg).forEach(([k,t])=>{
     if(TXT[k]){A[TXT[k]]=t;okQ.push(k);return}
-    if(k==='1'){const pq=t.split(/\s+(?:porque|por que|ya que|debido a que)\s+/i);g.raw.f1=dictFoods(pq[0]);if(pq[1])A.q1why=pq.slice(1).join(' porque ');okQ.push(k);return}
+    if(k==='1'&&NSB(t)){g.raw.f1=[];A.q1ns=true;okQ.push(k);return}
+    if(k==='1'){A.q1ns=false;const pq=t.split(/\s+(?:porque|por que|ya que|debido a que)\s+/i);g.raw.f1=dictFoods(pq[0]);if(pq[1])A.q1why=pq.slice(1).join(' porque ');okQ.push(k);return}
     if(k==='6'){const v=dictYN(t);if(v){A.q6=v;okQ.push(k)}else bad.push(k);return}
+    if((k==='7'||k==='10')&&NSB(t)){bad.push(k);return}
     if(k==='7'){if(/^(nada|ninguno|ninguna|no consumi[oó]|no comi[oó])/i.test(norm(t))){A.q7none=true;g.raw.f7=[]}else{g.raw.f7=dictFoods(t);A.q7none=false}okQ.push(k);return}
     if(k==='10'){const w=norm(t).split(/\s+/).map(nw).find(x=>x!=null);if(w!=null){A.q10=w>=4?'4 o más':String(w);okQ.push(k)}else bad.push(k);return}
     if(k==='14'){A.q14=t;const x=norm(t);if(/sin fluor|no tiene fluor|no contiene/.test(x))g.raw.salFl=false;else if(/fluor|emsal|quimpac/.test(x))g.raw.salFl=true;okQ.push(k);return}
+    if(k==='15'&&NSB(t)){A.q15='No';okQ.push(k);return}
     if(k==='15'){const v=dictYN(t);if(v){A.q15=v;const r=t.replace(/^\s*(s[ií]|no)(?=[\s,.:;]|$)[\s,.:;]*/i,'').replace(/^(porque|por que)\s+/i,'');if(r)A.q151=r;okQ.push(k)}else bad.push(k);return}
     const n=parseInt(k,10);if(n>=17&&n<=24&&!k.includes('.')){const v=dictLik(t);if(v){g.raw.lik[LIKK[n-17]]=v;okQ.push(k)}else bad.push(k);return}
     bad.push(k)});
