@@ -234,6 +234,11 @@ table.t td:last-child{text-align:right;font-weight:600}
     <div id="rMsg" class="msg hide"></div>
   </div>
   <div id="resBody"></div>
+  <div class="card" id="aprCard">
+    <h2>Lo que aprendió el escáner</h2>
+    <div class="muted" style="font-size:13px">Cada vez que guardas una ficha escaneada, la app anota lo que corregiste (sin nombres ni datos del paciente) y se lo recuerda al escáner en las siguientes lecturas.</div>
+    <div id="aprList" style="margin-top:8px"></div>
+  </div>
 </section>
 </main>
 <div id="login" class="hide" style="position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px">
@@ -609,6 +614,7 @@ $('#bSave').onclick=()=>{
   const rec={id,nombre:F.nombre.trim(),nac:F.nac||'',dni:F.dni||'',hc:F.hc||'',sis:F.sis||'',dir:F.dir||'',colegio:F.colegio||'',edadYMD:ageYMD(F.nac,F.fecha)||'',est:F.est||estBlank(),edad:+F.edad,sexo:F.sexo,grado:F.grado,tipo:F.tipo,fecha:F.fecha,dent:F.dent,pos:F.pos,iho:F.iho,ipc:F.ipc||[null,null,null,null,null,null],ihoNA:!!F.ihoNA,ihoT:SEXT.map((_,i)=>sextTooth(F,i)),obs:F.obs,creado:F.creado||now,actualizado:now};
   pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
   const nm=rec.nombre;
+  if(F._scan){try{aprLearnCpod(F._scan,rec)}catch(e){}}
   $('#scanMsg').classList.add('hide');document.querySelectorAll('.scanq').forEach(e=>e.classList.remove('scanq'));F=newForm();F.colegio=rec.colegio;F.grado=rec.grado;F.tipo=rec.tipo;F.fecha=rec.fecha;F.dent=rec.dent;F.pos=blankPos(rec.dent,'');cur=firstOf(F.dent);confirmDup=null;persist();fillForm();
   sm.className='msg ok';sm.textContent='Guardado: '+nm+'.'+(warn.length?' Revisa: '+warn.join('; ')+'.':'')+' Listo para el siguiente paciente (se mantienen grado, tipo, fecha y dentición).';sm.classList.remove('hide');
   window.scrollTo({top:0,behavior:'smooth'});
@@ -1211,6 +1217,7 @@ $('#capSave').onclick=()=>{
   const now=Date.now(),id=G.id||('c'+now.toString(36)+Math.random().toString(36).slice(2,7));
   const rec={_t:'capso',id,nombre:G.nombre.trim(),edad:+G.edad,sexo:G.sexo,grado:G.grado,instr:capCom()?(G.instr||''):'',apod:capMenor()?(G.apod||'').trim():'',colegio:G.colegio||'',toma:G.toma,fecha:G.fecha,raw:G.raw,resp:capDerive(G.raw).R,creado:G.creado||now,actualizado:now};
   pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
+  if(G._scan){try{aprLearnCap(G._scan,rec)}catch(e){}}
   $('#cScanMsg').classList.add('hide');const nm=rec.nombre;G=capNew();G.grado=rec.grado;G.colegio=rec.colegio;G.toma=rec.toma;G.fecha=rec.fecha;capMissShow=false;capConfirm=null;capPersist();capFill();
   $('#apodMsg').classList.add('hide');m.className='msg ok';m.textContent='CAPSO guardado: '+nm+'. Listo para la siguiente persona (se mantienen grado, colegio, toma y fecha).';m.classList.remove('hide');
   window.scrollTo({top:0,behavior:'smooth'});renderList();flush();
@@ -1491,6 +1498,7 @@ onAuthStateChanged(auth,u=>{
   $('#login').classList.add('hide');
   db=fsdb;dbState=navigator.onLine?'connecting':'offline';
   unsubP=db.collection('padron').onSnapshot(snap=>{const ch=[];let meta=null;snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==='meta')meta=v;else if(Array.isArray(v.items))ch.push([d.id,v.items])});ch.sort((a,b)=>a[0].localeCompare(b[0]));PADRON=ch.flatMap(c=>c[1]);padInfo(meta);padDxShow();if(F.nombre&&!F.hc&&padComplete(F,true)){persist();fillForm()}},()=>{});
+  if(window.__unsubA)window.__unsubA();window.__unsubA=db.collection('aprendizaje').onSnapshot(snap=>{snap.docs.forEach(d=>{if(d.id==='patrones'){const v=d.data();if(v&&v.p&&!aprDirty){APR=v.p;LS.set('apr_cache',APR);aprRender()}}})},err=>{});
   unsubC=db.collection(COL_C).onSnapshot(snap=>{const m={};snap.docs.forEach(d=>{const v=d.data();if(v)m[d.id]=v});capRemote=m;LS.set(LSP+'capcache',capRemote);updatePill();if(window.__capRefresh)window.__capRefresh()},err=>{});
   unsub=db.collection(COL_R).onSnapshot(snap=>{
     const m={};snap.docs.forEach(d=>{const v=d.data();if(v)m[d.id]=v});
@@ -1567,9 +1575,9 @@ $('#scanFile').onchange=async e=>{
   const files=[...e.target.files].slice(0,2);if(!files.length)return;
   scanBusy=true;const b=$('#bScan');b.disabled=true;b.textContent='Leyendo…';scanMsg('Leyendo la ficha… suele tardar entre 20 y 60 segundos. No cierres la app.',true);
   try{
-    const out=await scanSend(files);
+    const out=await scanSend(files,{system:CPOD_PROMPT+aprHint('cpod'),schema:CPOD_SCHEMA});
     const {f,Q,T}=scanApply(out.data||{});
-    F=f;cur=T.find(n=>visible(F.dent,n))||firstOf(F.dent);persist();fillForm();scanMark(Q);
+    F=f;F._scan=JSON.parse(JSON.stringify(f));cur=T.find(n=>visible(F.dent,n))||firstOf(F.dent);persist();fillForm();scanMark(Q);
     const lab={nombre:'nombre',sexo:'sexo',direccion:'dirección',colegio:'colegio',grado:'grado',seccion:'sección',fecha_examen:'fecha de examen',fecha_nacimiento:'fecha de nacimiento',edad:'edad',dni:'DNI',sis:'SIS',estomatologico:'examen estomatológico',ipb:'IHO (placa blanda)',ipc:'IHO (placa calcificada)',observaciones:'observaciones'};
     const dq=[...Q].map(k=>lab[k]).filter(Boolean),tq=T.filter(n=>visible(F.dent,n));
     let t='<b>Ficha leída. Aún no se ha guardado.</b> Compárala con la ficha en papel antes de guardar.';
@@ -1580,6 +1588,128 @@ $('#scanFile').onchange=async e=>{
   }catch(err){scanMsg(err&&err.name==='AbortError'?'La lectura tardó demasiado. Revisa la señal e intenta de nuevo.':'No se pudo leer la ficha: '+esc(err&&err.message||'error')+'. El formulario no se modificó.')}
   finally{scanBusy=false;b.disabled=false;b.textContent='📷 Escanear ficha CPOD'}
 };
+/* ---- aprendizaje del escáner (correcciones del usuario) ---- */
+const CPOD_PROMPT = `Eres un asistente que transcribe fichas epidemiológicas de salud oral en papel (Universidad Peruana Cayetano Heredia, Departamento de Odontología Social) llenadas a mano por un interno de odontología. Transcribe EXACTAMENTE lo escrito; no inventes ni deduzcas datos clínicos que no estén marcados. Si algo es ilegible o dudoso, deja el campo vacío o con tu mejor lectura y agrégalo a "dudas".
+
+Estructura de la ficha (página 1):
+I. DATOS PERSONALES: Apellidos y Nombres; Género (M/F encerrado en un círculo); Dirección; Colegio; Grado; Sección. A la derecha, tabla día/mes/año con Fecha de examen (A) y Fecha de nacimiento (B); debajo Edad (A-B), DNI y SIS.
+II. EXAMEN ESTOMATOLÓGICO (solo lo anormal): ATM, Ganglios, Queilitis, Lengua, Aftas, Otros; cada uno con NO / SI encerrado y una línea para describir.
+III. IHO-S: seis columnas (16/17, 11/21, 26/27, 36/37, 31/41, 46/47) con fila IPB (placa blanda) y fila IPC (placa calcificada); valores 0, 1, 2, 3 o NR (no registrable). Puede haber una pieza sustituta anotada entre paréntesis.
+IV. REGISTRO DE CARIES: dos arcadas, 16 columnas cada una. Cada columna tiene el número de la pieza permanente arriba a la izquierda y, en las columnas centrales, el de la decidua abajo a la derecha; la pieza examinada se encierra en un círculo. Debajo: fila "Pieza" (código de la pieza completa) y filas por superficie. Superior: O, P, D, V, M. Inferior: O, L, D, V, M. P (palatino) y L (lingual) son la misma cara "L". Los incisivos y caninos no tienen fila O.
+Códigos de superficie: 0 sana, 1 caries, 2 obturada con caries, 3 obturada sin caries, 6 sellante.
+Códigos de pieza: 4 perdida por caries, 5 perdida por otra razón, 7 pilar de puente, 8 permanente no erupcionada, 9 no registrable, 10 traumatismo, 11 hipoplasia.
+Al pie: Observaciones.
+
+Reglas para "piezas":
+- Devuelve un elemento por cada columna que tenga algo escrito o un círculo. Usa el número FDI de la pieza CIRCULADA; si no hay círculo, usa la permanente.
+- "pieza" es el código de la fila Pieza tal como está ("" si vacío). Si en la fila Pieza hay un código de superficie (0–3, 6) es solo el resumen: ponlo igual.
+- "caras": el código escrito en cada fila de superficie de esa columna ("" si vacía). Usa la clave L para P o L.
+- Si una columna está tachada o tiene X sin código, pon pieza "X".
+- Marca "duda": true en la pieza si algún número es poco legible.
+Fechas en formato DD/MM/AAAA. Sexo "Femenino" o "Masculino". Si la ficha no corresponde a este formato, devuelve campos vacíos y explícalo en "nota".`;
+const CPOD_SCHEMA = {
+  type: "object",
+  properties: {
+    nombre: { type: "string" },
+    sexo: { type: "string", enum: ["", "Femenino", "Masculino"] },
+    direccion: { type: "string" },
+    colegio: { type: "string" },
+    grado: { type: "string", description: "Número de grado, p. ej. 3" },
+    seccion: { type: "string", description: "Letra de sección, p. ej. B" },
+    fecha_examen: { type: "string" },
+    fecha_nacimiento: { type: "string" },
+    edad: { type: "string" },
+    dni: { type: "string" },
+    sis: { type: "string" },
+    estomatologico: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          item: { type: "string", enum: ["ATM", "Ganglios", "Queilitis", "Lengua", "Aftas", "Otros"] },
+          valor: { type: "string", enum: ["", "NO", "SI"] },
+          detalle: { type: "string" }
+        },
+        required: ["item", "valor", "detalle"]
+      }
+    },
+    ipb: { type: "array", items: { type: "string" }, description: "6 valores en orden 16/17, 11/21, 26/27, 36/37, 31/41, 46/47: '0'-'3', 'NR' o ''" },
+    ipc: { type: "array", items: { type: "string" }, description: "Igual que ipb, para placa calcificada" },
+    piezas: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          n: { type: "integer" },
+          pieza: { type: "string" },
+          caras: {
+            type: "object",
+            properties: { O: { type: "string" }, L: { type: "string" }, D: { type: "string" }, V: { type: "string" }, M: { type: "string" } },
+            required: ["O", "L", "D", "V", "M"]
+          },
+          duda: { type: "boolean" }
+        },
+        required: ["n", "pieza", "caras", "duda"]
+      }
+    },
+    observaciones: { type: "string" },
+    dudas: { type: "array", items: { type: "string" }, description: "Nombres de los campos dudosos: nombre, sexo, direccion, colegio, grado, seccion, fecha_examen, fecha_nacimiento, edad, dni, sis, estomatologico, ipb, ipc, observaciones" },
+    nota: { type: "string" }
+  },
+  required: ["nombre", "sexo", "direccion", "colegio", "grado", "seccion", "fecha_examen", "fecha_nacimiento", "edad", "dni", "sis", "estomatologico", "ipb", "ipc", "piezas", "observaciones", "dudas", "nota"]
+};
+let APR=LS.get('apr_cache',{}),aprDirty=false;
+function aprAdd(t,key,txt,ej){const o=APR[key]||(APR[key]={t,txt,n:0,ej:[]});o.n++;o.txt=txt;o.ult=today();if(ej!=null&&ej!==''){ej=String(ej);o.ej=[ej,...(o.ej||[]).filter(x=>x!==ej)].slice(0,5)}aprDirty=true}
+function aprSave(){if(!aprDirty)return;aprDirty=false;LS.set('apr_cache',APR);if(db)try{db.collection('aprendizaje').doc('patrones').set({p:APR,actualizado:Date.now()})}catch(e){}aprRender()}
+function aprHint(t){const L=Object.values(APR).filter(o=>o.t===t||o.t==='num').sort((a,b)=>b.n-a.n||String(b.ult).localeCompare(String(a.ult))).slice(0,20);
+  if(!L.length)return'';
+  return'\n\nCORRECCIONES PREVIAS DE ESTE USUARIO (errores de lectura que ya corrigió en hojas anteriores escritas con la misma letra; tenlos en cuenta, pero transcribe siempre lo que realmente está en esta hoja):\n'+L.map(o=>'- '+o.txt+(o.ej&&o.ej.length?' (ej.: '+o.ej.join(', ')+')':'')+' ['+o.n+(o.n>1?' veces':' vez')+']').join('\n')}
+const aprV=v=>v==null||v===''?'vacío':v==='x'?'NR':String(v);
+function aprDigits(a,b,where){a=String(a||'');b=String(b||'');if(!a||!b||a===b||a.length!==b.length)return;for(let i=0;i<a.length;i++){const x=a[i],y=b[i];if(x!==y&&/\d/.test(x)&&/\d/.test(y))aprAdd('num','dig:'+x+'>'+y,'En números escritos a mano leíste «'+x+'» cuando era «'+y+'»',where)}}
+const aprWords=t=>norm(t).replace(/[^a-z0-9ñ ]/g,' ').split(' ').filter(w=>w.length>=3);
+function aprText(a,b,where){if(norm(a)===norm(b))return;const A=aprWords(a),B=aprWords(b);
+  if(A.length===B.length){A.forEach((x,i)=>{if(x!==B[i])aprAdd('capso','pal:'+x+'>'+B[i],'Leíste la palabra «'+x+'» cuando decía «'+B[i]+'»',where)});return}
+  const ra=A.filter(x=>!B.includes(x)),rb=B.filter(x=>!A.includes(x));
+  if(ra.length===1&&rb.length===1)aprAdd('capso','pal:'+ra[0]+'>'+rb[0],'Leíste la palabra «'+ra[0]+'» cuando decía «'+rb[0]+'»',where);
+  else if(!A.length&&B.length)aprAdd('capso','vacio:'+where,'Dejaste vacía una respuesta que sí estaba escrita',where);
+  else aprAdd('capso','txt:'+where,'Tu transcripción de esta respuesta necesitó varias correcciones; léela con más cuidado',where)}
+function aprLearnCpod(S,R){
+  aprDigits(toDMY(S.nac),toDMY(R.nac),'fecha de nacimiento');aprDigits(toDMY(S.fecha),toDMY(R.fecha),'fecha de examen');aprDigits(S.dni,R.dni,'DNI');aprDigits(S.sis,R.sis,'SIS');
+  if(S.sexo&&R.sexo&&S.sexo!==R.sexo)aprAdd('cpod','sexo','El círculo de Género (M/F) lo leíste al revés','');
+  if(S.grado&&R.grado&&S.grado!==R.grado){const a=S.grado.split(' '),b=R.grado.split(' ');if(a[0]===b[0])aprAdd('cpod','sec:'+a[1]+'>'+b[1],'En la sección leíste «'+a[1]+'» cuando era «'+b[1]+'»','');else aprAdd('cpod','gr:'+a[0]+'>'+b[0],'En el grado leíste «'+a[0]+'» cuando era «'+b[0]+'»','')}
+  EST.forEach(k=>{const a=(S.est||{})[k]||{},b=(R.est||{})[k]||{};if(a.v!==b.v)aprAdd('cpod','est:'+a.v+'>'+b.v,'En el examen estomatológico marcaste «'+a.v+'» cuando estaba encerrado «'+b.v+'»',k)});
+  const SX=['16/17','11/21','26/27','36/37','31/41','46/47'];
+  if(!R.ihoNA)[['iho','IPB'],['ipc','IPC']].forEach(([f,l])=>{for(let i=0;i<6;i++){const a=(S[f]||[])[i],b=(R[f]||[])[i];if(a!==b&&!(a==null&&b==null))aprAdd('cpod','iho:'+aprV(a)+'>'+aprV(b),'En el IHO-S leíste «'+aprV(a)+'» cuando era «'+aprV(b)+'»',l+' '+SX[i])}});
+  if(S.dent!==R.dent){aprAdd('cpod','dent:'+S.dent+'>'+R.dent,'Interpretaste la dentición como '+({P:'permanente',M:'mixta',D:'decidua'})[S.dent]+' cuando era '+({P:'permanente',M:'mixta',D:'decidua'})[R.dent]+' (revisa qué número está circulado en cada columna)','');return}
+  const lab=m=>m==null?'sin código':m==='x'||m==='8'?'ausente/'+m:m;
+  for(const n of ALLN){if(!visible(R.dent,n))continue;const a=S.pos[n],b=R.pos[n];if(!a||!b)continue;
+    if(a.m!==b.m){aprAdd('cpod','pz:'+lab(a.m)+'>'+lab(b.m),'En la fila «Pieza» leíste «'+lab(a.m)+'» cuando era «'+lab(b.m)+'»','pieza '+n);continue}
+    if((a.f||'')!==(b.f||''))aprAdd('cpod','fl:'+(a.f||'-')+'>'+(b.f||'-'),'En la fila «Pieza» leíste «'+(a.f||'sin 10/11')+'» cuando era «'+(b.f||'sin 10/11')+'»','pieza '+n);
+    if(b.m)continue;const up=[1,2,5,6].includes(Math.floor(n/10));
+    for(const k of faces(PP(n))){const x=a.s[k],y=b.s[k];if(x!==y){const row=k==='L'?(up?'P':'L'):k;aprAdd('cpod','cara:'+x+'>'+y,'En las filas de superficie leíste «'+x+'» cuando era «'+y+'»',n+' fila '+row)}}}
+  aprSave()}
+function aprLearnCap(Sg,R){
+  const S=Sg.raw||{},A=S.a||{},B=(R.raw||{}).a||{};
+  aprDigits(Sg.edad,R.edad,'edad');aprDigits(toDMY(Sg.fecha),toDMY(R.fecha),'fecha');
+  if(Sg.sexo&&R.sexo&&Sg.sexo!==R.sexo)aprAdd('capso','csexo','Leíste el sexo al revés','');
+  const QN={q1why:'1',q2:'2',q21:'2.1',q3:'3',q4:'4',q5:'5',q61:'6.1',q62:'6.2',q63:'6.3',q8:'8',q9:'9',q101:'10.1',q11:'11',q111:'11.1',q112:'11.2',q12:'12',q13:'13',q14:'14',q151:'15.1',q16:'16'};
+  Object.entries(QN).forEach(([k,n])=>aprText(A[k]||'',B[k]||'','P'+n));
+  ['q6','q15'].forEach(k=>{if((A[k]||'')!==(B[k]||''))aprAdd('capso','yn:'+aprV(A[k])+'>'+aprV(B[k]),'En una pregunta Sí/No leíste «'+aprV(A[k])+'» cuando era «'+aprV(B[k])+'»','P'+k.slice(1))});
+  if((A.q10||'')!==(B.q10||''))aprAdd('capso','q10:'+aprV(A.q10)+'>'+aprV(B.q10),'En «veces al día que se cepilla» leíste «'+aprV(A.q10)+'» cuando era «'+aprV(B.q10)+'»','P10');
+  if(!!A.q7none!==!!B.q7none)aprAdd('capso','q7none','En la pregunta 7 confundiste «no consumió nada» con una lista de alimentos','P7');
+  [['f1','P1'],['f7','P7']].forEach(([f,w])=>{const a=(S[f]||[]).map(norm),b=((R.raw||{})[f]||[]).map(norm);const ra=a.filter(x=>!b.includes(x)),rb=b.filter(x=>!a.includes(x));
+    if(ra.length&&ra.length===rb.length)ra.forEach((x,i)=>aprAdd('capso','pal:'+x+'>'+rb[i],'Leíste el alimento «'+x+'» cuando decía «'+rb[i]+'»',w));
+    else if(!ra.length&&rb.length)aprAdd('capso','faltan:'+w,'Omitiste alimentos que sí estaban escritos en la lista',w)});
+  if(S.salFl!==(R.raw||{}).salFl&&S.salFl!=null)aprAdd('capso','sal','Leíste mal si la sal tenía flúor','P14');
+  for(let i=17;i<=24;i++){const k=LIKK[i-17],a=(S.lik||{})[k],b=((R.raw||{}).lik||{})[k];if(a!==b)aprAdd('capso','lik:'+aprV(a)+'>'+aprV(b),'En actitudes leíste «'+aprV(a)+'» cuando estaba marcado «'+aprV(b)+'»','P'+i)}
+  aprSave()}
+function aprRender(){const box=$('#aprList');if(!box)return;const L=Object.entries(APR).sort((a,b)=>b[1].n-a[1].n);
+  if(!L.length){box.innerHTML='<div class="muted" style="font-size:13px">Todavía nada. Escanea una ficha, corrige lo que haga falta y guárdala.</div>';return}
+  const T={cpod:'Ficha CPOD',capso:'CAPSO',num:'Números'};
+  box.innerHTML=L.map(([k,o])=>'<div class="row" style="justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--bd)"><div style="flex:1;min-width:200px;font-size:13px"><span class="badge">'+T[o.t]+'</span> '+esc(o.txt)+(o.ej&&o.ej.length?' <span class="muted">(ej.: '+esc(o.ej.join(', '))+')</span>':'')+'</div><b style="font-size:13px">'+o.n+'×</b><button class="btn sm" data-aprdel="'+esc(k)+'">Olvidar</button></div>').join('')
+   +'<div class="muted" style="font-size:12px;margin-top:6px">Al escanear se envían los 20 más frecuentes.</div>';
+  box.querySelectorAll('[data-aprdel]').forEach(b=>b.onclick=()=>{delete APR[b.dataset.aprdel];aprDirty=true;aprSave()})}
+aprRender();
 /* ---- escáner CAPSO (2 caras) ---- */
 const LIKK=CAPQ[2].items.map(it=>it.k); // P17..P24 en orden
 const CAP_PROMPT=`Eres un asistente que transcribe cuestionarios CAPSO (conocimientos, actitudes y prácticas en salud oral) en papel, de la Universidad Peruana Cayetano Heredia, llenados a mano por un interno de odontología durante una entrevista. Recibirás una o dos fotos (las dos caras de la hoja). Transcribe EXACTAMENTE lo que está escrito, con las palabras del entrevistado; no corrijas, no resumas, no evalúes si la respuesta es correcta y no inventes nada. Si una respuesta está vacía, deja "". Si algo es ilegible o dudoso, pon tu mejor lectura y agrega el número de la pregunta (o el nombre del campo) a "dudas".
@@ -1659,9 +1789,9 @@ async function capScanRun(){
   if(scanBusy||!capScanImgs.length)return;scanBusy=true;$('#cScanStep').classList.add('hide');const b=$('#bCScan');b.disabled=true;b.textContent='Leyendo…';
   cScanMsg('Leyendo el CAPSO ('+capScanImgs.length+' cara'+(capScanImgs.length>1?'s':'')+')… suele tardar entre 30 y 90 segundos. No cierres la app.',true);
   try{
-    const out=await scanSend(capScanImgs,{system:CAP_PROMPT,schema:CAP_SCHEMA});
+    const out=await scanSend(capScanImgs,{system:CAP_PROMPT+aprHint('capso'),schema:CAP_SCHEMA});
     const {g,Q}=capScanApply(out.data||{});
-    G=g;capPersist();capFill();if(window.__capRefresh)window.__capRefresh();
+    G=g;G._scan=JSON.parse(JSON.stringify(g));capPersist();capFill();if(window.__capRefresh)window.__capRefresh();
     const D=capDerive(G.raw),rev=CAP_ORDER.filter(k=>D.st[k]==='revisar').map(k=>CQ[k].t.split('.')[0]);
     let t='<b>CAPSO leído. Aún no se ha guardado.</b> Compáralo con la hoja antes de guardar.';
     if(Q.length)t+='<br>Lectura dudosa: '+esc(Q.join(', '))+'.';
