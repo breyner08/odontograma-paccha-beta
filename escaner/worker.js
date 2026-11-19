@@ -138,7 +138,7 @@ export default {
     if (!imgs.length || imgs.some(i => !/^image\/(jpeg|png|webp)$/.test(i.media_type) || typeof i.data !== "string")) return json({ error: "Falta la foto" }, 400, origin);
 
     const content = imgs.map(i => ({ type: "image", source: { type: "base64", media_type: i.media_type, data: i.data } }));
-    content.push({ type: "text", text: "Transcribe esta ficha." });
+    content.push({ type: "text", text: imgs.length > 1 ? "Transcribe este documento (" + imgs.length + " fotos)." : "Transcribe este documento." });
 
     const strict = o => { if (o && o.type === "object") { o.additionalProperties = false; Object.values(o.properties || {}).forEach(strict); } if (o && o.items) strict(o.items); return o; };
     const r = await fetch("https://api.anthropic.com/v1/messages", {
@@ -147,8 +147,8 @@ export default {
       body: JSON.stringify({
         model: env.MODEL || MODEL,
         max_tokens: 16000,
-        system: PROMPT,
-        output_config: { effort: "medium", format: { type: "json_schema", schema: strict(JSON.parse(JSON.stringify(SCHEMA))) } },
+        system: typeof body.system === "string" && body.system.length < 30000 ? body.system : PROMPT,
+        output_config: { effort: "medium", format: { type: "json_schema", schema: strict(JSON.parse(JSON.stringify(body.schema && typeof body.schema === "object" ? body.schema : SCHEMA))) } },
         messages: [{ role: "user", content }]
       })
     });

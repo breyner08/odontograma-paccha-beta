@@ -108,7 +108,7 @@ table.t td:last-child{text-align:right;font-weight:600}
 <section id="vNew">
   <div class="card">
     <h2 id="ftitle">Datos del paciente</h2>
-    <div id="scanBar" class="row hide" style="margin:-4px 0 10px;align-items:center;gap:8px"><button class="btn sm" id="bScan">📷 Escanear ficha</button><span class="muted" style="font-size:12px">Solo con internet · llena el formulario sin guardarlo</span><input type="file" id="scanFile" accept="image/*" multiple class="hide"></div>
+    <div id="scanBar" class="row hide" style="margin:-4px 0 10px;align-items:center;gap:8px"><button class="btn sm" id="bScan">📷 Escanear ficha CPOD</button><span class="muted" style="font-size:12px">Solo con internet · llena el formulario sin guardarlo</span><input type="file" id="scanFile" accept="image/*" multiple class="hide"></div>
     <div id="scanMsg" class="msg hide" style="margin:0 0 10px"></div>
     <div class="grid">
       <label class="f" style="grid-column:1/-1;position:relative">Nombre y apellidos<input id="fNom" name="paciente_x" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" placeholder="Escribe el nombre"><div class="sug hide" id="fSug"></div></label>
@@ -202,6 +202,8 @@ table.t td:last-child{text-align:right;font-weight:600}
 <section id="vCap" class="hide">
   <div class="card">
     <h2 id="capTitle">CAPSO · datos de la persona</h2>
+    <div id="cScanBar" class="hide" style="margin:-4px 0 10px"><div class="row" style="align-items:center;gap:8px"><button class="btn sm" id="bCScan">📷 Escanear CAPSO (2 caras)</button><span class="muted" style="font-size:12px">Solo con internet · llena el cuestionario sin guardarlo</span></div><div id="cScanStep" class="row hide" style="gap:8px;margin-top:8px"><button class="btn sm pri" id="bCScan2">📷 Cara 2</button><button class="btn sm" id="bCScanGo">Leer solo la cara 1</button><button class="btn sm" id="bCScanX">Cancelar</button></div><input type="file" id="cScanFile" accept="image/*" multiple class="hide"></div>
+    <div id="cScanMsg" class="msg hide" style="margin:0 0 10px"></div>
     <div class="grid">
       <label class="f" style="grid-column:1/-1;position:relative">Nombre y apellidos<input id="cNom" name="encuestado_x" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" placeholder="Escribe el nombre"><div class="sug hide" id="cSug"></div></label>
       <datalist id="names2"></datalist>
@@ -1197,7 +1199,7 @@ function capPrefill(){
   if(!G.edad){const y=P.nac?ageOf(P.nac,G.fecha):null;const e=y!=null&&y>=0?y:P.edad;if(e!=null&&e!==''){G.edad=String(e);ch=true}}
   if(ch){capPersist();capFill();const m=$('#capPref');m.textContent='Datos personales cargados de '+P.nombre+' ('+(P.fuente._t?P.fuente.toma:P.fuente.tipo)+', '+toDMY(P.fuente.fecha)+').';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),6000)}
 }
-$('#capNew').onclick=()=>{$('#apodMsg').classList.add('hide');G=capNew();capMissShow=false;capPersist();capFill();$('#capMsg').classList.add('hide');window.scrollTo(0,0)};
+$('#capNew').onclick=()=>{$('#cScanMsg').classList.add('hide');$('#apodMsg').classList.add('hide');G=capNew();capMissShow=false;capPersist();capFill();$('#capMsg').classList.add('hide');window.scrollTo(0,0)};
 $('#capSave').onclick=()=>{
   const m=$('#capMsg');m.className='msg';
   const errs=[];if(!G.nombre.trim())errs.push('nombre');if(!(+G.edad>0))errs.push('edad');if(!G.sexo)errs.push('sexo');if(capMenor()&&!(G.apod||'').trim())errs.push('apoderado (menor de 12 años)');
@@ -1209,7 +1211,7 @@ $('#capSave').onclick=()=>{
   const now=Date.now(),id=G.id||('c'+now.toString(36)+Math.random().toString(36).slice(2,7));
   const rec={_t:'capso',id,nombre:G.nombre.trim(),edad:+G.edad,sexo:G.sexo,grado:G.grado,instr:capCom()?(G.instr||''):'',apod:capMenor()?(G.apod||'').trim():'',colegio:G.colegio||'',toma:G.toma,fecha:G.fecha,raw:G.raw,resp:capDerive(G.raw).R,creado:G.creado||now,actualizado:now};
   pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
-  const nm=rec.nombre;G=capNew();G.grado=rec.grado;G.colegio=rec.colegio;G.toma=rec.toma;G.fecha=rec.fecha;capMissShow=false;capConfirm=null;capPersist();capFill();
+  $('#cScanMsg').classList.add('hide');const nm=rec.nombre;G=capNew();G.grado=rec.grado;G.colegio=rec.colegio;G.toma=rec.toma;G.fecha=rec.fecha;capMissShow=false;capConfirm=null;capPersist();capFill();
   $('#apodMsg').classList.add('hide');m.className='msg ok';m.textContent='CAPSO guardado: '+nm+'. Listo para la siguiente persona (se mantienen grado, colegio, toma y fecha).';m.classList.remove('hide');
   window.scrollTo({top:0,behavior:'smooth'});renderList();flush();
 };
@@ -1500,7 +1502,7 @@ onAuthStateChanged(auth,u=>{
 });
 /* ---- escáner de fichas (solo con internet) ---- */
 const SCAN_URL=CFG.SCAN_URL||'';
-function scanVis(){$('#scanBar').classList.toggle('hide',!(SCAN_URL&&navigator.onLine&&auth.currentUser))}
+function scanVis(){const on=!!(SCAN_URL&&navigator.onLine&&auth.currentUser);$('#scanBar').classList.toggle('hide',!on);$('#cScanBar').classList.toggle('hide',!on)}
 addEventListener('online',scanVis);addEventListener('offline',()=>{scanVis();scanBusy=false});onAuthStateChanged(auth,scanVis);
 let scanBusy=false;
 function scanMsg(t,ok){const m=$('#scanMsg');m.className='msg'+(ok?' ok':'');m.innerHTML=t;m.classList.toggle('hide',!t)}
@@ -1511,6 +1513,15 @@ async function scanPrep(file){
     const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,w,h);g.drawImage(img,0,0,w,h);
     return{media_type:'image/jpeg',data:c.toDataURL('image/jpeg',0.85).split(',')[1]}}
   finally{URL.revokeObjectURL(url)}
+}
+async function scanSend(files,extra){
+  const images=[];for(const f of files)images.push(await scanPrep(f));
+  const tok=await auth.currentUser.getIdToken();
+  const ac=new AbortController(),to=setTimeout(()=>ac.abort(),180000);
+  let r;try{r=await fetch(SCAN_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(Object.assign({images},extra||{})),signal:ac.signal})}finally{clearTimeout(to)}
+  const out=await r.json().catch(()=>({}));
+  if(!r.ok||!out.ok)throw new Error(out.error||('Error '+r.status));
+  return out;
 }
 function scanApply(d){
   const Q=new Set((d.dudas||[]).map(x=>String(x).toLowerCase())),T=[],f=newForm(),s=x=>String(x==null?'':x).trim();
@@ -1556,12 +1567,7 @@ $('#scanFile').onchange=async e=>{
   const files=[...e.target.files].slice(0,2);if(!files.length)return;
   scanBusy=true;const b=$('#bScan');b.disabled=true;b.textContent='Leyendo…';scanMsg('Leyendo la ficha… suele tardar entre 20 y 60 segundos. No cierres la app.',true);
   try{
-    const images=[];for(const f of files)images.push(await scanPrep(f));
-    const tok=await auth.currentUser.getIdToken();
-    const ac=new AbortController(),to=setTimeout(()=>ac.abort(),150000);
-    let r;try{r=await fetch(SCAN_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({images}),signal:ac.signal})}finally{clearTimeout(to)}
-    const out=await r.json().catch(()=>({}));
-    if(!r.ok||!out.ok)throw new Error(out.error||('Error '+r.status));
+    const out=await scanSend(files);
     const {f,Q,T}=scanApply(out.data||{});
     F=f;cur=T.find(n=>visible(F.dent,n))||firstOf(F.dent);persist();fillForm();scanMark(Q);
     const lab={nombre:'nombre',sexo:'sexo',direccion:'dirección',colegio:'colegio',grado:'grado',seccion:'sección',fecha_examen:'fecha de examen',fecha_nacimiento:'fecha de nacimiento',edad:'edad',dni:'DNI',sis:'SIS',estomatologico:'examen estomatológico',ipb:'IHO (placa blanda)',ipc:'IHO (placa calcificada)',observaciones:'observaciones'};
@@ -1572,8 +1578,100 @@ $('#scanFile').onchange=async e=>{
     if(out.data&&out.data.nota)t+='<br>Nota: '+esc(out.data.nota);
     scanMsg(t,!dq.length&&!tq.length);window.scrollTo(0,0);
   }catch(err){scanMsg(err&&err.name==='AbortError'?'La lectura tardó demasiado. Revisa la señal e intenta de nuevo.':'No se pudo leer la ficha: '+esc(err&&err.message||'error')+'. El formulario no se modificó.')}
-  finally{scanBusy=false;b.disabled=false;b.textContent='📷 Escanear ficha'}
+  finally{scanBusy=false;b.disabled=false;b.textContent='📷 Escanear ficha CPOD'}
 };
+/* ---- escáner CAPSO (2 caras) ---- */
+const LIKK=CAPQ[2].items.map(it=>it.k); // P17..P24 en orden
+const CAP_PROMPT=`Eres un asistente que transcribe cuestionarios CAPSO (conocimientos, actitudes y prácticas en salud oral) en papel, de la Universidad Peruana Cayetano Heredia, llenados a mano por un interno de odontología durante una entrevista. Recibirás una o dos fotos (las dos caras de la hoja). Transcribe EXACTAMENTE lo que está escrito, con las palabras del entrevistado; no corrijas, no resumas, no evalúes si la respuesta es correcta y no inventes nada. Si una respuesta está vacía, deja "". Si algo es ilegible o dudoso, pon tu mejor lectura y agrega el número de la pregunta (o el nombre del campo) a "dudas".
+
+Datos de la persona (encabezado): nombre y apellidos, edad, sexo, grado y sección (si es escolar), fecha, nombre del apoderado (si lo hay) y grado de instrucción (si lo hay).
+
+I. CONOCIMIENTOS
+1. Mencione 5 alimentos que causen daño a sus dientes y ¿por qué? → q1_alimentos (lista, un alimento por elemento) y q1_porque.
+2. ¿Por qué es importante cepillarse los dientes? → q2
+2.1 ¿Qué elementos debe emplear para la limpieza de la boca? → q21
+3. ¿Qué partes de la boca tiene que limpiar diariamente? → q3
+4. ¿Cada cuánto tiempo se debe ir al dentista? → q4
+5. ¿A qué edad se debería ir por primera vez al dentista? → q5
+6. Sabe usted ¿qué es el flúor? (Sí/No) → q6
+6.1 ¿Qué acción tiene? → q61 · 6.2 ¿Qué alimentos tienen flúor? → q62 · 6.3 ¿En qué otros productos se puede encontrar el flúor? → q63
+II. PRÁCTICAS
+7. ¿Qué alimentos consumió ayer fuera de las tres comidas principales? → q7_alimentos (lista). Si dice que nada, q7_nada = true.
+8. ¿A alguno le agregó azúcar? ¿Cuáles? → q8
+9. ¿Qué emplea para la limpieza de su boca? → q9
+10. ¿Cuántas veces al día se cepilla? → q10 (solo el número; "4 o más" si son 4 o más)
+10.1 ¿En qué momentos del día se cepilla? → q101
+11. ¿Hace cuánto tiempo visitó al dentista? → q11 · 11.1 ¿En qué lugar? → q111 · 11.2 ¿Motivo? → q112
+12. ¿Qué hace cuando tiene dolor de muela? → q12
+13. ¿Qué remedio o producto casero emplea? → q13
+14. Paquete de sal: marca y concentración de flúor → q14_marca; q14_fluor = "Sí" si anotaron que tiene flúor, "No" si anotaron que no tiene, "" si no se sabe.
+15. ¿Usa pasta dental? (Sí/No) → q15 · 15.1 ¿Por qué? → q151
+16. ¿En qué se basa para elegir la marca de pasta dental? → q16
+III. ACTITUDES (opción marcada: "De acuerdo", "Ni de acuerdo ni en desacuerdo" o "En desacuerdo")
+17. Para evitar la caries es importante disminuir el consumo de dulces → l17
+18. El tiempo que dura mi cepillo depende del número de veces que me cepillo → l18
+19. El cepillo puede ser compartido por varios miembros de la familia → l19
+20. Se debe visitar al dentista solamente cuando existe dolor de muela → l20
+21. La elección de una pasta dental depende solamente del precio → l21
+22. Para comprar una bolsa de sal solo nos fijamos en el precio → l22
+23. Se deben reemplazar los dulces por frutas en las comidas → l23
+24. Las personas se interesan en su salud cuando visitan al dentista por lo menos una vez al año → l24
+Si la numeración de la hoja es algo distinta, guíate por el texto de la pregunta. Fecha en formato DD/MM/AAAA. Sexo "Femenino" o "Masculino".`;
+const CS=()=>({type:'string'}),LIKE={type:'string',enum:['','De acuerdo','Ni de acuerdo ni en desacuerdo','En desacuerdo']},YN={type:'string',enum:['','Sí','No']};
+const CAP_SCHEMA=(()=>{const P={nombre:CS(),edad:CS(),sexo:{type:'string',enum:['','Femenino','Masculino']},grado:CS(),seccion:CS(),fecha:CS(),apoderado:CS(),instruccion:CS(),
+  q1_alimentos:{type:'array',items:CS()},q1_porque:CS(),q2:CS(),q21:CS(),q3:CS(),q4:CS(),q5:CS(),q6:YN,q61:CS(),q62:CS(),q63:CS(),
+  q7_alimentos:{type:'array',items:CS()},q7_nada:{type:'boolean'},q8:CS(),q9:CS(),q10:CS(),q101:CS(),q11:CS(),q111:CS(),q112:CS(),q12:CS(),q13:CS(),q14_marca:CS(),q14_fluor:YN,q15:YN,q151:CS(),q16:CS()};
+  for(let i=17;i<=24;i++)P['l'+i]=LIKE;P.dudas={type:'array',items:CS()};P.nota=CS();
+  return{type:'object',properties:P,required:Object.keys(P),additionalProperties:false}})();
+function capScanApply(d){
+  const s=x=>String(x==null?'':x).trim(),g=capNew(),A=g.raw.a,Q=(d.dudas||[]).map(s).filter(Boolean);
+  g.toma=G.toma;g.nombre=s(d.nombre).replace(/\s+/g,' ').toUpperCase();
+  const e=parseInt(s(d.edad),10);g.edad=e>0&&e<111?String(e):'';
+  g.sexo=/^f/i.test(s(d.sexo))?'Femenino':/^m/i.test(s(d.sexo))?'Masculino':'';
+  const gr=parseInt(s(d.grado),10),sc=s(d.seccion).toUpperCase().replace(/[^A-D]/g,'').slice(0,1);
+  if(gr>=1&&gr<=5&&sc)g.grado=gr+'º '+sc;else if(s(d.grado)||sc)Q.push('grado');else g.colegio='';
+  const fe=toISO(s(d.fecha));g.fecha=fe||today();if(s(d.fecha)&&!fe)Q.push('fecha');
+  g.apod=s(d.apoderado);
+  const ins=norm(s(d.instruccion));if(ins){const m=INSTR.find(x=>norm(x)===ins)||INSTR.find(x=>ins&&norm(x).startsWith(ins))||INSTR.find(x=>ins.includes(norm(x)));if(m)g.instr=m;else Q.push('grado de instrucción ('+s(d.instruccion)+')')}
+  const L=a=>(Array.isArray(a)?a:[]).map(s).filter(Boolean);
+  g.raw.f1=L(d.q1_alimentos);A.q1why=s(d.q1_porque);
+  ['q2','q21','q3','q4','q5','q61','q62','q63','q8','q9','q101','q11','q111','q112','q12','q13','q151','q16'].forEach(k=>{A[k]=s(d[k])});
+  A.q6=['Sí','No'].includes(d.q6)?d.q6:'';A.q15=['Sí','No'].includes(d.q15)?d.q15:'';
+  g.raw.f7=L(d.q7_alimentos);A.q7none=!!d.q7_nada&&!g.raw.f7.length;
+  const n10=s(d.q10);const n=parseInt(n10,10);A.q10=/4\s*o\s*m/i.test(n10)||n>=4?'4 o más':(n>=0&&n<=3?String(n):'');if(n10&&A.q10==='')Q.push('10');
+  A.q14=s(d.q14_marca);g.raw.salFl=d.q14_fluor==='Sí'?true:d.q14_fluor==='No'?false:undefined;
+  for(let i=17;i<=24;i++){const v=d['l'+i];if(C_LIK.includes(v))g.raw.lik[LIKK[i-17]]=v}
+  return{g,Q};
+}
+let capScanImgs=[];
+function cScanMsg(t,ok){const m=$('#cScanMsg');m.className='msg'+(ok?' ok':'');m.innerHTML=t;m.classList.toggle('hide',!t)}
+function cScanReset(){capScanImgs=[];$('#cScanStep').classList.add('hide');$('#bCScan').disabled=false;$('#bCScan').textContent='📷 Escanear CAPSO (2 caras)'}
+$('#bCScan').onclick=()=>{if(scanBusy)return;if(!navigator.onLine){cScanMsg('Sin conexión: el escáner necesita internet.');return}
+  const hasAns=G.nombre||Object.values(G.raw.a||{}).some(v=>v)||(G.raw.f1||[]).length||Object.keys(G.raw.lik||{}).length;
+  if(hasAns&&!confirm('Lo que está en el cuestionario se reemplazará por lo que se lea de la hoja. ¿Continuar?'))return;
+  cScanReset();cScanMsg('Toma la foto de la <b>cara 1</b> (o elige las dos fotos juntas desde la galería).',true);$('#cScanFile').value='';$('#cScanFile').click()};
+$('#bCScan2').onclick=()=>{$('#cScanFile').value='';$('#cScanFile').click()};
+$('#bCScanX').onclick=()=>{cScanReset();cScanMsg('')};
+$('#bCScanGo').onclick=()=>capScanRun();
+$('#cScanFile').onchange=e=>{const f=[...e.target.files];if(!f.length)return;capScanImgs.push(...f);capScanImgs=capScanImgs.slice(0,2);
+  if(capScanImgs.length>=2)capScanRun();else{$('#cScanStep').classList.remove('hide');cScanMsg('Cara 1 lista. Ahora toma la foto de la <b>cara 2</b>.',true)}};
+async function capScanRun(){
+  if(scanBusy||!capScanImgs.length)return;scanBusy=true;$('#cScanStep').classList.add('hide');const b=$('#bCScan');b.disabled=true;b.textContent='Leyendo…';
+  cScanMsg('Leyendo el CAPSO ('+capScanImgs.length+' cara'+(capScanImgs.length>1?'s':'')+')… suele tardar entre 30 y 90 segundos. No cierres la app.',true);
+  try{
+    const out=await scanSend(capScanImgs,{system:CAP_PROMPT,schema:CAP_SCHEMA});
+    const {g,Q}=capScanApply(out.data||{});
+    G=g;capPersist();capFill();if(window.__capRefresh)window.__capRefresh();
+    const D=capDerive(G.raw),rev=CAP_ORDER.filter(k=>D.st[k]==='revisar').map(k=>CQ[k].t.split('.')[0]);
+    let t='<b>CAPSO leído. Aún no se ha guardado.</b> Compáralo con la hoja antes de guardar.';
+    if(Q.length)t+='<br>Lectura dudosa: '+esc(Q.join(', '))+'.';
+    if(rev.length)t+='<br>La clave necesita que revises: '+esc(rev.join(', '))+'.';
+    if(capMenor()&&!G.apod)t+='<br>Es menor de 12 años: completa el nombre del apoderado.';
+    if(out.data&&out.data.nota)t+='<br>Nota: '+esc(out.data.nota);
+    cScanMsg(t,!Q.length&&!rev.length);window.scrollTo(0,0);
+  }catch(err){cScanMsg(err&&err.name==='AbortError'?'La lectura tardó demasiado. Revisa la señal e intenta de nuevo.':'No se pudo leer el CAPSO: '+esc(err&&err.message||'error')+'. El cuestionario no se modificó.')}
+  finally{scanBusy=false;cScanReset()}
+}
 /* ---- carga del padrón del C.S. ---- */
 function padInfo(meta){const el=$('#padInfo');if(!el)return;el.textContent=PADRON.length?('Padrón del C.S.: '+PADRON.length+' personas'+(meta&&meta.fecha?' · cargado el '+toDMY(meta.fecha):'')+'. Escribe un nombre, DNI o N.º de historia para buscar.'):'Padrón del C.S.: no cargado.'}
 $('#bPad').onclick=()=>{if(!db){lmsg('Inicia sesión para cargar el padrón.');return}$('#padFile').value='';$('#padFile').click()};
