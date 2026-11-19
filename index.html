@@ -40,6 +40,7 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .muted{color:var(--tx2);font-size:13px}
 .msg{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--warnbg);color:var(--warn);margin-top:8px}
 .msg.ok{background:var(--acs);color:var(--ac)}
+.scanq{outline:2px solid #f59e0b!important;outline-offset:2px;border-radius:8px}
 .hide{display:none!important}
 /* paleta */
 .pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-bottom:8px}
@@ -107,6 +108,8 @@ table.t td:last-child{text-align:right;font-weight:600}
 <section id="vNew">
   <div class="card">
     <h2 id="ftitle">Datos del paciente</h2>
+    <div id="scanBar" class="row hide" style="margin:-4px 0 10px;align-items:center;gap:8px"><button class="btn sm" id="bScan">📷 Escanear ficha</button><span class="muted" style="font-size:12px">Solo con internet · llena el formulario sin guardarlo</span><input type="file" id="scanFile" accept="image/*" multiple class="hide"></div>
+    <div id="scanMsg" class="msg hide" style="margin:0 0 10px"></div>
     <div class="grid">
       <label class="f" style="grid-column:1/-1;position:relative">Nombre y apellidos<input id="fNom" name="paciente_x" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" placeholder="Escribe el nombre"><div class="sug hide" id="fSug"></div></label>
       <datalist id="names"></datalist>
@@ -576,7 +579,7 @@ function prefill(){
   if(F.tipo!=='Diagnóstico'&&prev&&prev.dent){F.dent=prev.dent;F.pos=prev.pos?JSON.parse(JSON.stringify(prev.pos)):blankPos(prev.dent,F.edad);ch=true}
   if(ch){if(!F.touched&&F.tipo==='Diagnóstico')F.pos=blankPos(F.dent,F.edad);persist();fillForm();const m=$('#prefMsg');m.textContent='Datos personales cargados de '+P.nombre+' ('+(P.fuente._t?P.fuente.toma:P.fuente.tipo)+', '+toDMY(P.fuente.fecha)+').';m.classList.remove('hide');setTimeout(()=>m.classList.add('hide'),6000)}
 }
-$('#bNuevo').onclick=()=>{F=newForm();cur=firstOf('P');persist();fillForm();$('#saveMsg').classList.add('hide');window.scrollTo(0,0)};
+$('#bNuevo').onclick=()=>{$('#scanMsg').classList.add('hide');document.querySelectorAll('.scanq').forEach(e=>e.classList.remove('scanq'));F=newForm();cur=firstOf('P');persist();fillForm();$('#saveMsg').classList.add('hide');window.scrollTo(0,0)};
 
 /* ---------- guardado y nube ---------- */
 let db=null,dbState='connecting',remote=LS.get(LSP+'cache',{}),pending=LS.get(LSP+'pending',{}),dels=LS.get(LSP+'del',[]),flushing=false,readOnly=false,downloads=null;
@@ -604,7 +607,7 @@ $('#bSave').onclick=()=>{
   const rec={id,nombre:F.nombre.trim(),nac:F.nac||'',dni:F.dni||'',hc:F.hc||'',sis:F.sis||'',dir:F.dir||'',colegio:F.colegio||'',edadYMD:ageYMD(F.nac,F.fecha)||'',est:F.est||estBlank(),edad:+F.edad,sexo:F.sexo,grado:F.grado,tipo:F.tipo,fecha:F.fecha,dent:F.dent,pos:F.pos,iho:F.iho,ipc:F.ipc||[null,null,null,null,null,null],ihoNA:!!F.ihoNA,ihoT:SEXT.map((_,i)=>sextTooth(F,i)),obs:F.obs,creado:F.creado||now,actualizado:now};
   pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
   const nm=rec.nombre;
-  F=newForm();F.colegio=rec.colegio;F.grado=rec.grado;F.tipo=rec.tipo;F.fecha=rec.fecha;F.dent=rec.dent;F.pos=blankPos(rec.dent,'');cur=firstOf(F.dent);confirmDup=null;persist();fillForm();
+  $('#scanMsg').classList.add('hide');document.querySelectorAll('.scanq').forEach(e=>e.classList.remove('scanq'));F=newForm();F.colegio=rec.colegio;F.grado=rec.grado;F.tipo=rec.tipo;F.fecha=rec.fecha;F.dent=rec.dent;F.pos=blankPos(rec.dent,'');cur=firstOf(F.dent);confirmDup=null;persist();fillForm();
   sm.className='msg ok';sm.textContent='Guardado: '+nm+'.'+(warn.length?' Revisa: '+warn.join('; ')+'.':'')+' Listo para el siguiente paciente (se mantienen grado, tipo, fecha y dentición).';sm.classList.remove('hide');
   window.scrollTo({top:0,behavior:'smooth'});
   renderList();flush();
@@ -1495,6 +1498,82 @@ onAuthStateChanged(auth,u=>{
   flush();
   if(!ENV.suffix)setTimeout(migrateBeta,1500);
 });
+/* ---- escáner de fichas (solo con internet) ---- */
+const SCAN_URL=CFG.SCAN_URL||'';
+function scanVis(){$('#scanBar').classList.toggle('hide',!(SCAN_URL&&navigator.onLine&&auth.currentUser))}
+addEventListener('online',scanVis);addEventListener('offline',()=>{scanVis();scanBusy=false});onAuthStateChanged(auth,scanVis);
+let scanBusy=false;
+function scanMsg(t,ok){const m=$('#scanMsg');m.className='msg'+(ok?' ok':'');m.innerHTML=t;m.classList.toggle('hide',!t)}
+async function scanPrep(file){
+  const url=URL.createObjectURL(file);
+  try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('img'));i.src=url});
+    const M=1568,k=Math.min(1,M/Math.max(img.naturalWidth,img.naturalHeight)),w=Math.round(img.naturalWidth*k),h=Math.round(img.naturalHeight*k);
+    const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,w,h);g.drawImage(img,0,0,w,h);
+    return{media_type:'image/jpeg',data:c.toDataURL('image/jpeg',0.85).split(',')[1]}}
+  finally{URL.revokeObjectURL(url)}
+}
+function scanApply(d){
+  const Q=new Set((d.dudas||[]).map(x=>String(x).toLowerCase())),T=[],f=newForm(),s=x=>String(x==null?'':x).trim();
+  f.nombre=s(d.nombre).replace(/\s+/g,' ').toUpperCase();
+  f.sexo=/^f/i.test(s(d.sexo))?'Femenino':/^m/i.test(s(d.sexo))?'Masculino':'';
+  f.dir=s(d.direccion);
+  const col=s(d.colegio);f.colegio=/(dos|2)\s*de\s*mayo/i.test(col)?'I.E. Dos de Mayo':col;
+  const g=parseInt(s(d.grado),10),sc=s(d.seccion).toUpperCase().replace(/[^A-D]/g,'').slice(0,1);
+  if(g>=1&&g<=5&&sc)f.grado=g+'º '+sc;else if(!col&&!s(d.grado))f.grado='Comunidad / domicilio';else{f.grado='';if(s(d.grado)||sc)Q.add('grado')}
+  const fe=s(d.fecha_examen),fn=s(d.fecha_nacimiento);
+  f.fecha=toISO(fe)||today();if(fe&&!toISO(fe))Q.add('fecha_examen');
+  f.nac=toISO(fn)||'';if(fn&&!f.nac)Q.add('fecha_nacimiento');
+  const y=ageOf(f.nac,f.fecha);f.edad=y!=null&&y>=0&&y<=110?String(y):(String(parseInt(s(d.edad),10)||'')||'');
+  if(y!=null&&parseInt(s(d.edad),10)&&parseInt(s(d.edad),10)!==y)Q.add('edad');
+  f.edadYMD=ageYMD(f.nac,f.fecha)||'';
+  const dn=s(d.dni).replace(/\D/g,'');f.dni=dn.slice(0,8);if(dn&&dn.length!==8)Q.add('dni');
+  f.sis=s(d.sis);f.obs=s(d.observaciones);
+  (d.estomatologico||[]).forEach(e=>{if(f.est[e.item]){const v=s(e.valor).toUpperCase();f.est[e.item]={v:v==='SI'||v==='SÍ'?'SI':'NO',d:v==='SI'||v==='SÍ'?s(e.detalle):''}}});
+  const iv=v=>{v=s(v).toUpperCase();return/^[0-3]$/.test(v)?+v:v==='NR'?'x':null};
+  for(let i=0;i<6;i++){f.iho[i]=iv((d.ipb||[])[i]);f.ipc[i]=iv((d.ipc||[])[i])}
+  const P=(d.piezas||[]).filter(p=>p&&ALLN.includes(+p.n));
+  const hasD=P.some(p=>isDec(+p.n)),hasP=P.some(p=>!isDec(+p.n));
+  f.dent=hasD&&hasP?'M':hasD?'D':'P';
+  f.pos=blankPos(f.dent,f.edad);
+  for(const p of P){const n=+p.n,t=f.pos[n],c=s(p.pieza).toUpperCase(),cr=p.caras||{};
+    if(['4','5','7','8','9'].includes(c)){t.m=c;t.f=null;t.s=S0()}
+    else if(c==='X'){t.m=isDec(n)?'x':'8';t.f=null;t.s=S0()}
+    else{t.m=null;t.f=c==='10'||c==='11'?c:null;for(const k of faces(PP(n))){const v=s(cr[k]);t.s[k]=['0','1','2','3','6'].includes(v)?v:'0'}}
+    if(f.dent==='M'){const q=Math.floor(n/10),pp=PP(n);
+      if(isDec(n)){const pe=(q-4)*10+pp;if(f.pos[pe]&&!P.some(x=>+x.n===pe))f.pos[pe]={m:'8',f:null,s:S0()}}
+      else if(pp<=5){const de=(q+4)*10+pp;if(f.pos[de]&&!P.some(x=>+x.n===de))f.pos[de]={m:'x',f:null,s:S0()}}}
+    if(p.duda)T.push(n)}
+  f.touched=true;
+  return{f,Q,T};
+}
+const SCANF={nombre:'#fNom',sexo:'#fSexo',direccion:'#fDir',colegio:'#fColS',grado:'#fGrado',seccion:'#fGrado',fecha_examen:'#fFecha',fecha_nacimiento:'#fNac',edad:'#fEdad',dni:'#fDni',sis:'#fSis',estomatologico:'#est',ipb:'#iho',ipc:'#iho',observaciones:'#fObs'};
+function scanMark(Q){document.querySelectorAll('.scanq').forEach(e=>e.classList.remove('scanq'));
+  Q.forEach(k=>{const el=SCANF[k]&&$(SCANF[k]);if(!el)return;el.classList.add('scanq');const off=()=>{el.classList.remove('scanq');el.removeEventListener('input',off);el.removeEventListener('change',off);el.removeEventListener('click',off)};el.addEventListener('input',off);el.addEventListener('change',off);if(el.id==='est'||el.id==='iho')el.addEventListener('click',off)})}
+$('#bScan').onclick=()=>{if(scanBusy)return;if(!navigator.onLine){scanMsg('Sin conexión: el escáner necesita internet.');return}
+  if((F.nombre||F.touched)&&!confirm('Lo que está en el formulario se reemplazará por lo que se lea de la ficha. ¿Continuar?'))return;
+  $('#scanFile').value='';$('#scanFile').click()};
+$('#scanFile').onchange=async e=>{
+  const files=[...e.target.files].slice(0,2);if(!files.length)return;
+  scanBusy=true;const b=$('#bScan');b.disabled=true;b.textContent='Leyendo…';scanMsg('Leyendo la ficha… suele tardar entre 20 y 60 segundos. No cierres la app.',true);
+  try{
+    const images=[];for(const f of files)images.push(await scanPrep(f));
+    const tok=await auth.currentUser.getIdToken();
+    const ac=new AbortController(),to=setTimeout(()=>ac.abort(),150000);
+    let r;try{r=await fetch(SCAN_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({images}),signal:ac.signal})}finally{clearTimeout(to)}
+    const out=await r.json().catch(()=>({}));
+    if(!r.ok||!out.ok)throw new Error(out.error||('Error '+r.status));
+    const {f,Q,T}=scanApply(out.data||{});
+    F=f;cur=T.find(n=>visible(F.dent,n))||firstOf(F.dent);persist();fillForm();scanMark(Q);
+    const lab={nombre:'nombre',sexo:'sexo',direccion:'dirección',colegio:'colegio',grado:'grado',seccion:'sección',fecha_examen:'fecha de examen',fecha_nacimiento:'fecha de nacimiento',edad:'edad',dni:'DNI',sis:'SIS',estomatologico:'examen estomatológico',ipb:'IHO (placa blanda)',ipc:'IHO (placa calcificada)',observaciones:'observaciones'};
+    const dq=[...Q].map(k=>lab[k]).filter(Boolean),tq=T.filter(n=>visible(F.dent,n));
+    let t='<b>Ficha leída. Aún no se ha guardado.</b> Compárala con la ficha en papel antes de guardar.';
+    if(dq.length)t+='<br>Revisa (en naranja): '+esc([...new Set(dq)].join(', '))+'.';
+    if(tq.length)t+='<br>Piezas con lectura dudosa: '+tq.join(', ')+' (la primera ya está seleccionada).';
+    if(out.data&&out.data.nota)t+='<br>Nota: '+esc(out.data.nota);
+    scanMsg(t,!dq.length&&!tq.length);window.scrollTo(0,0);
+  }catch(err){scanMsg(err&&err.name==='AbortError'?'La lectura tardó demasiado. Revisa la señal e intenta de nuevo.':'No se pudo leer la ficha: '+esc(err&&err.message||'error')+'. El formulario no se modificó.')}
+  finally{scanBusy=false;b.disabled=false;b.textContent='📷 Escanear ficha'}
+};
 /* ---- carga del padrón del C.S. ---- */
 function padInfo(meta){const el=$('#padInfo');if(!el)return;el.textContent=PADRON.length?('Padrón del C.S.: '+PADRON.length+' personas'+(meta&&meta.fecha?' · cargado el '+toDMY(meta.fecha):'')+'. Escribe un nombre, DNI o N.º de historia para buscar.'):'Padrón del C.S.: no cargado.'}
 $('#bPad').onclick=()=>{if(!db){lmsg('Inicia sesión para cargar el padrón.');return}$('#padFile').value='';$('#padFile').click()};
