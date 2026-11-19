@@ -204,6 +204,13 @@ table.t td:last-child{text-align:right;font-weight:600}
     <h2 id="capTitle">CAPSO · datos de la persona</h2>
     <div id="cScanBar" class="hide" style="margin:-4px 0 10px"><div class="row" style="align-items:center;gap:8px"><button class="btn sm" id="bCScan">📷 Escanear CAPSO (2 caras)</button><span class="muted" style="font-size:12px">Solo con internet · llena el cuestionario sin guardarlo</span></div><div id="cScanStep" class="row hide" style="gap:8px;margin-top:8px"><button class="btn sm pri" id="bCScan2">📷 Cara 2</button><button class="btn sm" id="bCScanGo">Leer solo la cara 1</button><button class="btn sm" id="bCScanX">Cancelar</button></div><input type="file" id="cScanFile" accept="image/*" multiple class="hide"></div>
     <div id="cScanMsg" class="msg hide" style="margin:0 0 10px"></div>
+    <div style="margin:0 0 10px"><button class="btn sm" id="bCDict">🎙 Dictar CAPSO</button></div>
+    <div id="cDictBox" class="hide" style="margin:0 0 12px;border:1px solid var(--bd);border-radius:10px;padding:10px">
+      <div class="muted" style="font-size:12px;margin-bottom:6px">Dicta o escribe. Ejemplo: «paciente Luis Nima Cáceres, DNI 76543210, 14 años, masculino, tercero A del colegio Dos de Mayo, CAPSO 1, el día de hoy. Pregunta 1: dulces, gaseosa, galletas porque pican los dientes. Pregunta 2: … Pregunta 6 punto 1: … Pregunta 17: de acuerdo…». Funciona sin internet con el micrófono del teclado; di «coma» para separar los alimentos.</div>
+      <textarea id="cDict" rows="6" style="width:100%" placeholder="Toca aquí y usa el micrófono del teclado, o el botón Escuchar"></textarea>
+      <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm hide" id="bCListen">🎙 Escuchar</button><button class="btn sm pri" id="bCDictGo">Llenar el CAPSO</button><button class="btn sm" id="bCDictClr">Borrar texto</button></div>
+      <div id="cDictMsg" class="msg hide"></div>
+    </div>
     <div class="grid">
       <label class="f" style="grid-column:1/-1;position:relative">Nombre y apellidos<input id="cNom" name="encuestado_x" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" placeholder="Escribe el nombre"><div class="sug hide" id="cSug"></div></label>
       <datalist id="names2"></datalist>
@@ -1215,7 +1222,7 @@ $('#capSave').onclick=()=>{
   if(!G.id&&capConfirm!==key+'dup'){const dup=allCapso().find(r=>norm(r.nombre)===norm(G.nombre)&&r.toma===G.toma);
     if(dup){capConfirm=key+'dup';m.textContent='Ya hay un '+G.toma+' de '+dup.nombre+' ('+toDMY(dup.fecha)+'). Toca «Guardar» otra vez si es otra persona.';m.classList.remove('hide');return}}
   const now=Date.now(),id=G.id||('c'+now.toString(36)+Math.random().toString(36).slice(2,7));
-  const rec={_t:'capso',id,nombre:G.nombre.trim(),edad:+G.edad,sexo:G.sexo,grado:G.grado,instr:capCom()?(G.instr||''):'',apod:capMenor()?(G.apod||'').trim():'',colegio:G.colegio||'',toma:G.toma,fecha:G.fecha,raw:G.raw,resp:capDerive(G.raw).R,creado:G.creado||now,actualizado:now};
+  const rec={_t:'capso',id,nombre:G.nombre.trim(),dni:G.dni||'',dir:G.dir||'',edad:+G.edad,sexo:G.sexo,grado:G.grado,instr:capCom()?(G.instr||''):'',apod:capMenor()?(G.apod||'').trim():'',colegio:G.colegio||'',toma:G.toma,fecha:G.fecha,raw:G.raw,resp:capDerive(G.raw).R,creado:G.creado||now,actualizado:now};
   pending[id]=JSON.parse(JSON.stringify(rec));LS.set(LSP+'pending',pending);
   if(G._scan){try{aprLearnCap(G._scan,rec)}catch(e){}}
   $('#cScanMsg').classList.add('hide');const nm=rec.nombre;G=capNew();G.grado=rec.grado;G.colegio=rec.colegio;G.toma=rec.toma;G.fecha=rec.fecha;capMissShow=false;capConfirm=null;capPersist();capFill();
@@ -1802,6 +1809,85 @@ async function capScanRun(){
   }catch(err){cScanMsg(err&&err.name==='AbortError'?'La lectura tardó demasiado. Revisa la señal e intenta de nuevo.':'No se pudo leer el CAPSO: '+esc(err&&err.message||'error')+'. El cuestionario no se modificó.')}
   finally{scanBusy=false;cScanReset()}
 }
+/* ---- dictado del CAPSO (funciona sin internet; análisis local) ---- */
+const NUMW={cero:0,uno:1,una:1,un:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,trece:13,catorce:14,quince:15,dieciseis:16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20,veintiuno:21,veintiun:21,veintidos:22,veintitres:23,veinticuatro:24,primero:1,primera:1,segundo:2,tercero:3,tercer:3,cuarto:4,quinto:5};
+const nw=w=>{w=norm(w).replace(/[^a-z0-9]/g,'');return /^\d+$/.test(w)?+w:(w in NUMW?NUMW[w]:null)};
+const DEC={'61':'6.1','62':'6.2','63':'6.3','101':'10.1','111':'11.1','112':'11.2','151':'15.1'};
+function dictSplit(text){
+  const re=/\bpreguntas?\s*(?:n(?:u|ú)mero\s*)?(\d+|[a-záéíóúñ]+)(?:\s*(?:[.,]|punto)\s*(\d+|[a-záéíóúñ]+))?/gi;
+  const marks=[];let m;while((m=re.exec(text))){const a=nw(m[1]);if(a==null)continue;let b=m[2]!=null?nw(m[2]):null;if(m[2]!=null&&b==null){re.lastIndex=m.index+m[0].length-m[2].length}
+    let k=b!=null?a+'.'+b:String(a);if(DEC[k])k=DEC[k];marks.push({k,i:m.index,e:b!=null||m[2]==null?m.index+m[0].length:m.index+m[0].length-m[2].length})}
+  const head=marks.length?text.slice(0,marks[0].i):text;const seg={};
+  marks.forEach((mk,j)=>{let t=text.slice(mk.e,j+1<marks.length?marks[j+1].i:text.length);t=t.replace(/^[\s:.,;-]*(?:respuesta|responde|respondi[oó]|dice)?[\s:.,;-]*/i,'').replace(/[\s,;.]+$/,'').trim();if(t)seg[mk.k]=t});
+  return{head,seg}}
+function dictFoods(t){let it=splitItems(t.replace(/\s+coma\s+/gi,', '));
+  if(it.length===1&&/\s/.test(it[0])){const multi=[...F_CARIO,...F_AMB,...F_NO].map(x=>x.replace(/^=/,'')).filter(x=>x.includes(' '));let rest=' '+norm(it[0])+' ';const out=[];
+    multi.forEach(mw=>{if(rest.includes(' '+mw+' ')){out.push(mw);rest=rest.replace(' '+mw+' ',' ')}});it=out.concat(rest.trim().split(/\s+/).filter(w=>w.length>2&&!['los','las','con','del','que','muy'].includes(w)))}
+  return it}
+function dictYN(t){const x=' '+norm(t)+' ';if(/^ (si|sí)\b/.test(x)||/ si /.test(x.slice(0,6)))return'Sí';if(/^ no\b/.test(x))return'No';if(/ (si|sí) /.test(x))return'Sí';if(/ no /.test(x))return'No';return''}
+function dictLik(t){const x=norm(t);if(/ni de acuerdo|ni en desacuerdo|indiferente|neutral|mas o menos|regular/.test(x))return'Ni de acuerdo ni en desacuerdo';if(/desacuerdo|no esta de acuerdo|no estoy de acuerdo|no de acuerdo/.test(x))return'En desacuerdo';if(/de acuerdo|acuerdo|^si\b/.test(x))return'De acuerdo';return''}
+function dictHead(h,g,got){
+  const H=' '+h.replace(/\s+/g,' ')+' ',N=' '+norm(h).replace(/[^a-z0-9ñ/ ]/g,' ').replace(/\s+/g,' ')+' ';
+  const stop='(?=\\s+(?:en\\s+(?:el\\s+)?(?:primer[oa]?|segundo|tercer[oa]?|cuarto|quinto|[1-5])|en\\s+(?:el\\s+)?colegio|en\\s+la\\s+comunidad|con|dni|de\\s+\\d+|\\d+|edad|domicilio|direcci|vive|en\\s+(?:el\\s+)?grado|grado|del\\s+colegio|colegio|comunidad|tomando|capso|sexo|masculino|femenino|var[oó]n|mujer|hombre|apoderad|el\\s+d[ií]a|fecha)\\b|[,.;:]|$)';
+  const mn=H.match(new RegExp('(?:paciente|alumn[oa]|estudiante|nombre(?:s)?(?:\\s+y\\s+apellidos)?|se[nñ]or(?:a|ita)?)\\s*:?\\s+([A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+?)'+stop,'i'));
+  if(mn){g.nombre=mn[1].trim().replace(/\s+/g,' ').toUpperCase();got.push('nombre')}
+  const md=N.match(/dni\s*(?:numero\s*)?((?:\d\s*){8})/);if(md){g.dni=md[1].replace(/\s/g,'');got.push('DNI')}
+  const me=N.match(/(\d{1,2}|[a-z]+)\s+anos/);if(me&&nw(me[1])!=null){g.edad=String(nw(me[1]));got.push('edad')}
+  if(/ (femenino|mujer|nina|senora|senorita) /.test(N)){g.sexo='Femenino';got.push('sexo')}else if(/ (masculino|varon|hombre|nino) /.test(N)){g.sexo='Masculino';got.push('sexo')}
+  const mg=N.match(/(?:grado\s+)?(primero|segundo|tercero|tercer|cuarto|quinto|[1-5])\s*(?:ro|do|to|vo|°|º|grado|de secundaria|de primaria|año)?\s*(?:grado\s*)?(?:seccion\s*)?(?:letra\s*)?([abcd])\b/);
+  if(mg){g.grado=nw(mg[1])+'º '+mg[2].toUpperCase();got.push('grado')}
+  if(/ (dos|2) de mayo /.test(N)){g.colegio='I.E. Dos de Mayo';got.push('colegio')}
+  if(/ comunidad /.test(N)&&!mg){g.grado='Comunidad / domicilio';g.colegio='';got.push('comunidad')}
+  const mt=N.match(/capso\s*(1|2|3|uno|dos|tres)\b/);if(mt){g.toma=CAP_TOMAS[nw(mt[1])-1];got.push('toma')}
+  if(/(dia de )?hoy/.test(N)){g.fecha=today();got.push('fecha')}
+  const mf=h.match(/(\d{1,2})\s*[\/-]\s*(\d{1,2})\s*[\/-]\s*(\d{4})/);if(mf){const iso=toISO(mf[1]+'/'+mf[2]+'/'+mf[3]);if(iso){g.fecha=iso;if(!got.includes('fecha'))got.push('fecha')}}
+  const MES={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,setiembre:9,septiembre:9,octubre:10,noviembre:11,diciembre:12};
+  const ml=N.match(/(\d{1,2}) de (enero|febrero|marzo|abril|junio|julio|agosto|setiembre|septiembre|octubre|noviembre|diciembre) (?:de |del )?(\d{4})/);if(ml){const iso=toISO(ml[1]+'/'+MES[ml[2]]+'/'+ml[3]);if(iso){g.fecha=iso;if(!got.includes('fecha'))got.push('fecha')}}
+  const mdir=H.match(new RegExp('(?:domicilio|direcci[oó]n|vive)\\s*(?:en|:)?\\s+(.+?)'+stop.replace('domicilio|direcci|vive|',''),'i'));if(mdir){g.dir=mdir[1].trim();got.push('domicilio')}
+  const ma=H.match(new RegExp('apoderad[oa]\\s*(?:es|:)?\\s+([A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+?)'+stop.replace('apoderad|',''),'i'));if(ma){g.apod=ma[1].trim().replace(/\s+/g,' ').toUpperCase();got.push('apoderado')}
+  const ins=INSTR.find(x=>N.includes(' '+norm(x)+' '));if(ins){g.instr=ins;got.push('instrucción')}
+}
+function dictApply(text){
+  const {head,seg}=dictSplit(text);const got=[],okQ=[],bad=[];
+  const g=JSON.parse(JSON.stringify(G));g.raw=g.raw||{a:{},ovr:{},cp:{},f1:[],f7:[],lik:{}};const A=g.raw.a||(g.raw.a={});g.raw.lik=g.raw.lik||{};
+  dictHead(head,g,got);
+  if(g.dni&&!g.nombre&&typeof padFind==='function'){const x=padFind({dni:g.dni});if(x){g.nombre=x.n;got.push('nombre (padrón)')}}
+  if(g.dni||g.nombre){const x=padFind({dni:g.dni,nombre:g.nombre});if(x){if(!g.sexo&&x.s){g.sexo=x.s;got.push('sexo (padrón)')}if(!g.edad&&x.b){const e=ageOf(x.b,g.fecha||today());if(e!=null&&e>=0){g.edad=String(e);got.push('edad (padrón)')}}}}
+  const TXT={'2':'q2','2.1':'q21','3':'q3','4':'q4','5':'q5','6.1':'q61','6.2':'q62','6.3':'q63','8':'q8','9':'q9','10.1':'q101','11':'q11','11.1':'q111','11.2':'q112','12':'q12','13':'q13','15.1':'q151','16':'q16'};
+  Object.entries(seg).forEach(([k,t])=>{
+    if(TXT[k]){A[TXT[k]]=t;okQ.push(k);return}
+    if(k==='1'){const pq=t.split(/\s+(?:porque|por que|ya que|debido a que)\s+/i);g.raw.f1=dictFoods(pq[0]);if(pq[1])A.q1why=pq.slice(1).join(' porque ');okQ.push(k);return}
+    if(k==='6'){const v=dictYN(t);if(v){A.q6=v;okQ.push(k)}else bad.push(k);return}
+    if(k==='7'){if(/^(nada|ninguno|ninguna|no consumi[oó]|no comi[oó])/i.test(norm(t))){A.q7none=true;g.raw.f7=[]}else{g.raw.f7=dictFoods(t);A.q7none=false}okQ.push(k);return}
+    if(k==='10'){const w=norm(t).split(/\s+/).map(nw).find(x=>x!=null);if(w!=null){A.q10=w>=4?'4 o más':String(w);okQ.push(k)}else bad.push(k);return}
+    if(k==='14'){A.q14=t;const x=norm(t);if(/sin fluor|no tiene fluor|no contiene/.test(x))g.raw.salFl=false;else if(/fluor|emsal|quimpac/.test(x))g.raw.salFl=true;okQ.push(k);return}
+    if(k==='15'){const v=dictYN(t);if(v){A.q15=v;const r=t.replace(/^\s*(s[ií]|no)(?=[\s,.:;]|$)[\s,.:;]*/i,'').replace(/^(porque|por que)\s+/i,'');if(r)A.q151=r;okQ.push(k)}else bad.push(k);return}
+    const n=parseInt(k,10);if(n>=17&&n<=24&&!k.includes('.')){const v=dictLik(t);if(v){g.raw.lik[LIKK[n-17]]=v;okQ.push(k)}else bad.push(k);return}
+    bad.push(k)});
+  return{g,got,okQ,bad}}
+LS.get(LSP+'dict_txt','')&&($('#cDict').value=LS.get(LSP+'dict_txt',''));
+$('#cDict').oninput=e=>LS.set(LSP+'dict_txt',e.target.value);
+$('#bCDict').onclick=()=>{$('#cDictBox').classList.toggle('hide');if(!$('#cDictBox').classList.contains('hide'))$('#cDict').focus()};
+$('#bCDictClr').onclick=()=>{$('#cDict').value='';LS.set(LSP+'dict_txt','');$('#cDictMsg').classList.add('hide')};
+$('#bCDictGo').onclick=()=>{const t=$('#cDict').value.trim();const m=$('#cDictMsg');if(!t){m.className='msg';m.textContent='Primero dicta o escribe el texto.';m.classList.remove('hide');return}
+  const {g,got,okQ,bad}=dictApply(t);
+  if(!got.length&&!okQ.length){m.className='msg';m.textContent='No encontré datos. Empieza con «paciente …» y di «pregunta 1 …», «pregunta 2 …».';m.classList.remove('hide');return}
+  G=g;capPersist();capFill();if(window.__capRefresh)window.__capRefresh();
+  const all=['1','2','2.1','3','4','5','6','6.1','6.2','6.3','7','8','9','10','10.1','11','11.1','11.2','12','13','14','15','15.1','16','17','18','19','20','21','22','23','24'];
+  const falt=all.filter(k=>!okQ.includes(k)&&!(k.startsWith('6.')&&G.raw.a.q6==='No'));
+  let h='<b>CAPSO llenado desde el dictado. Aún no se ha guardado.</b>';
+  if(got.length)h+='<br>Datos: '+esc(got.join(', '))+'.';
+  h+='<br>Preguntas con respuesta: '+okQ.length+'.';
+  if(bad.length)h+='<br>No entendí la respuesta de: '+bad.map(k=>'P'+k).join(', ')+' (complétalas a mano).';
+  if(falt.length&&falt.length<all.length)h+='<br>Sin dictar: '+falt.map(k=>'P'+k).join(', ')+'.';
+  if(G.dir)h+='<br>El domicilio se guardará con el CAPSO y servirá para el odontograma.';
+  m.className='msg'+(bad.length?'':' ok');m.innerHTML=h;m.classList.remove('hide')};
+{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(SR){const b=$('#bCListen');b.classList.remove('hide');let rec=null,on=false;
+  const stop=()=>{on=false;b.textContent='🎙 Escuchar';b.classList.remove('pri');try{rec&&rec.stop()}catch(e){}};
+  b.onclick=()=>{if(on){stop();return}rec=new SR();rec.lang='es-PE';rec.continuous=true;rec.interimResults=false;
+    rec.onresult=e=>{let t='';for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)t+=e.results[i][0].transcript;if(t){const ta=$('#cDict');ta.value=(ta.value.trim()+' '+t.trim()).trim();LS.set(LSP+'dict_txt',ta.value)}};
+    rec.onend=()=>{if(on){try{rec.start()}catch(e){stop()}}};rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){stop();const m=$('#cDictMsg');m.className='msg';m.textContent='No se pudo usar el micrófono aquí; usa el micrófono del teclado.';m.classList.remove('hide')}};
+    try{rec.start();on=true;b.textContent='⏹ Detener';b.classList.add('pri')}catch(e){stop()}}}}
 /* ---- carga del padrón del C.S. ---- */
 function padInfo(meta){const el=$('#padInfo');if(!el)return;el.textContent=PADRON.length?('Padrón del C.S.: '+PADRON.length+' personas'+(meta&&meta.fecha?' · cargado el '+toDMY(meta.fecha):'')+'. Escribe un nombre, DNI o N.º de historia para buscar.'):'Padrón del C.S.: no cargado.'}
 $('#bPad').onclick=()=>{if(!db){lmsg('Inicia sesión para cargar el padrón.');return}$('#padFile').value='';$('#padFile').click()};
