@@ -9,6 +9,6 @@ export const FIREBASE_CONFIG = {
 };
 export const ALLOWED_EMAIL = "";
 // Dirección del intermediario del escáner (Cloudflare Worker). Vacío = botón oculto.
-export const SCAN_URL = "";
+export const SCAN_URL = "https://escaner-paccha.breyner-palomino-s.workers.dev/";
 // Versión de prueba: datos y almacenamiento separados de la versión oficial.
 export const ENV = { suffix: "_beta", ls: "cpodb_", appName: "beta", label: "BETA", version: "2.1" };
