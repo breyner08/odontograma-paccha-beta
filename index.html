@@ -233,8 +233,9 @@ table.t td:last-child{text-align:right;font-weight:600}
 <section id="vRes" class="hide">
   <div class="card">
     <div class="row">
-      <label class="f" style="flex:1;min-width:160px">Colegio / grupo<select id="rCol"></select></label>
-      <label class="f" style="flex:1;min-width:160px">Indicador de higiene<select id="rIho"><option value="ipb">IPB (placa blanda)</option><option value="iho">IHO-S (IPB + IPC)</option></select></label>
+      <label class="f" style="flex:1;min-width:160px">Componente<select id="rComp"><option value="">CPOD y ceod</option><option value="P">Solo CPOD (permanentes)</option><option value="D">Solo ceod (deciduos)</option></select></label>
+      <label class="f" style="flex:1;min-width:160px">Edad<select id="rEdad"><option value="">Todas las edades</option><option value="0-11">Menores de 12 años</option><option value="12-17">12 a 17 años (adolescentes)</option><option value="5-12">5 a 12 años</option><option value="18-34">18 a 34 años</option><option value="35-44">35 a 44 años</option><option value="45-64">45 a 64 años</option><option value="65-120">65 años a más</option><option value="x">Personalizado…</option></select></label>
+      <label class="f hide" id="rEdadX" style="min-width:150px">Desde – hasta<span class="row" style="gap:6px;flex-wrap:nowrap"><input id="rE1" type="number" inputmode="numeric" min="0" max="120" placeholder="desde" style="width:70px"><input id="rE2" type="number" inputmode="numeric" min="0" max="120" placeholder="hasta" style="width:70px"></span></label>
       <button class="btn" id="rXlsx" style="align-self:flex-end">Descargar Excel</button>
     </div>
     <div class="muted" style="margin-top:6px">Se calcula con los registros guardados. Prom. = promedio; D.E. = desviación estándar. En las comparaciones pareadas solo entran las personas que tienen ambas tomas (se emparejan por nombre).</div>
@@ -277,7 +278,7 @@ import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,co
 import * as CFG from "./config.js";
 const FIREBASE_CONFIG=CFG.FIREBASE_CONFIG,ALLOWED_EMAIL=CFG.ALLOWED_EMAIL||"";
 const IS_BETA=/-beta\//.test(location.pathname);
-const ENV=Object.assign(IS_BETA?{suffix:"_beta",ls:"cpodb_",appName:"beta",label:"BETA",version:"2.1"}:{suffix:"",ls:"cpod_",appName:"",label:"",version:"2.1"},CFG.ENV||{});
+const ENV=Object.assign(IS_BETA?{suffix:"_beta",ls:"cpodb_",appName:"beta",label:"BETA",version:"2.1"}:{suffix:"",ls:"cpod_",appName:"",label:"",version:"2.2"},CFG.ENV||{});
 const LSP=ENV.ls,COL_R="registros"+ENV.suffix,COL_C="capso"+ENV.suffix;
 (function(){
 const $=s=>document.querySelector(s);
@@ -1270,11 +1271,11 @@ const pkey=r=>(r.dni&&r.dni.length===8)?'dni:'+r.dni:'n:'+norm(r.nombre);
 const T_IHO=['Diagnóstico','Control 1 (solo IHO)','Control 2 (solo IHO)'];
 let resModel=[];
 function renderRes(){
-  const colSel=$('#rCol'),cur=colSel.value;
-  const cols=[...new Set([...allRecords(),...allCapso()].map(r=>r.colegio||'(sin colegio)'))].sort();
-  colSel.innerHTML='<option value="">Todos</option>'+cols.map(c=>'<option'+(c===cur?' selected':'')+'>'+esc(c)+'</option>').join('');
-  const fcol=r=>!colSel.value||(r.colegio||'(sin colegio)')===colSel.value;
-  const metric=$('#rIho').value;
+  const comp=$('#rComp').value,ev=$('#rEdad').value;$('#rEdadX').classList.toggle('hide',ev!=='x');
+  let e1=0,e2=200;if(ev==='x'){const a=parseInt($('#rE1').value,10),b=parseInt($('#rE2').value,10);if(!isNaN(a))e1=a;if(!isNaN(b))e2=b}else if(ev){[e1,e2]=ev.split('-').map(Number)}
+  const ageLab=!ev?'':ev==='x'?((isNaN(parseInt($('#rE1').value,10))&&isNaN(parseInt($('#rE2').value,10)))?'':' · edad '+e1+'–'+(e2>=200?'más':e2)):' · '+$('#rEdad').selectedOptions[0].textContent.toLowerCase();
+  const fcol=r=>{if(!ev)return true;const a=parseInt(r.edad,10);return !isNaN(a)&&a>=e1&&a<=e2};
+  const metric='ipb';const SP=comp!=='D',SD=comp!=='P';
   const R=allRecords().filter(fcol).map(r=>fixPos(JSON.parse(JSON.stringify(r))));
   const C=allCapso().filter(fcol);
   const M=[];// {title, note, head:[[...]], rows:[[...]], tot?:bool, chart?}
@@ -1285,32 +1286,47 @@ function renderRes(){
   // KPIs
   const exp=V.filter(v=>(v.P?v.CPOD:0)+(v.D?v.ceod:0)>0).length;
   const vp=V.filter(v=>v.P),vd=V.filter(v=>v.D);
+  const expP=vp.filter(v=>v.CPOD>0).length,expD=vd.filter(v=>v.ceod>0).length;
   const kp={n:V.length,exp,prev:V.length?exp/V.length:null,cpod:st(vp.map(v=>v.CPOD)).m,ceod:st(vd.map(v=>v.ceod)).m};
+  const nDonly=V.filter(v=>!v.P).length,nPonly=V.filter(v=>!v.D).length;
   // tablas Anexo 2
   const ag=a=>a[0]===a[1]?String(a[0]):a[0]+' - '+a[1];
   const EDc=[[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12]],EDC=EDc.concat([[15,15],[35,44],[65,74]]);
-  const tabla=(title,set,comps,ages)=>{if(!set.length){M.push({title,note:'Sin registros con esta dentición todavía.',head:[['—']],rows:[]});return}const head=[['Edad','N.º examinados',...comps.flatMap(c=>[c[1]+' Prom.',c[1]+' D.E.'])]];const rows=[];
+  const tabla=(title,set,comps,ages,note)=>{if(!set.length){M.push({title,note:'Sin registros con esta dentición'+(ev?' en este rango de edad':'')+'.',head:[['—']],rows:[]});return}const head=[['Edad','N.º examinados',...comps.flatMap(c=>[c[1]+' Prom.',c[1]+' D.E.'])]];const rows=[];
     ages.concat([null]).forEach(a=>{const sub=a?set.filter(v=>v.edad>=a[0]&&v.edad<=a[1]):set;const row=[a?ag(a):'Total',sub.length];comps.forEach(c=>{const s=st(sub.map(v=>v[c[0]]));row.push(s.m,s.sd)});rows.push(row)});
-    M.push({title,head,rows,tot:true,num:true})};
-  tabla('I. Índice ceod en la población (Anexo 2)',vd,[['c','c'],['e','e'],['o','o'],['ceod','ceod'],['sd','Piezas deciduas sanas']],EDc);
-  tabla('I-b. Índice ceos (superficies deciduas)',vd,[['cs','cs'],['es','es'],['os','os'],['ceos','ceos'],['ssd','Superficies deciduas sanas']],EDc);
-  tabla('II. Índice CPOD en la población (Anexo 2)',vp,[['C','C'],['Pp','P'],['O','O'],['CPOD','CPOD'],['SP','Piezas permanentes sanas']],EDC);
-  tabla('II-b. Índice CPOS (superficies permanentes)',vp,[['CS','CS'],['PS','PS'],['OS','OS'],['CPOS','CPOS'],['SSP','Superficies permanentes sanas']],EDC);
+    M.push({title,note,head,rows,tot:true,num:true})};
+  const noteP=nDonly?'Total: '+vp.length+' de '+V.length+' diagnósticos. '+(nDonly===1?'1 persona tiene':nDonly+' personas tienen')+' solo dentición decidua: no tiene'+(nDonly===1?'':'n')+' CPOD y se cuenta'+(nDonly===1?'':'n')+' en la tabla ceod.':'';
+  const noteD=nPonly?'Total: '+vd.length+' de '+V.length+' diagnósticos (solo los que tienen dentición decidua o mixta; '+nPonly+' con dentición permanente no tienen ceod).':'';
+  const ceodT=()=>{tabla('I. Índice ceod en la población (Anexo 2)',vd,[['c','c'],['e','e'],['o','o'],['ceod','ceod'],['sd','Piezas deciduas sanas']],EDc,noteD);
+  tabla('I-b. Índice ceos (superficies deciduas)',vd,[['cs','cs'],['es','es'],['os','os'],['ceos','ceos'],['ssd','Superficies deciduas sanas']],EDc,noteD)};
+  if(SD)ceodT();
+  if(SD){const agesD=[...new Set(vd.map(v=>v.edad))].sort((a,b)=>a-b);tabla('I-c. ceod por cada edad registrada',vd,[['c','c'],['e','e'],['o','o'],['ceod','ceod'],['ceos','ceos']],agesD.map(a=>[a,a]),noteD)}
+  if(SP){tabla('II. Índice CPOD en la población (Anexo 2)',vp,[['C','C'],['Pp','P'],['O','O'],['CPOD','CPOD'],['SP','Piezas permanentes sanas']],EDC,noteP);
+  tabla('II-b. Índice CPOS (superficies permanentes)',vp,[['CS','CS'],['PS','PS'],['OS','OS'],['CPOS','CPOS'],['SSP','Superficies permanentes sanas']],EDC,noteP);
   const ages=[...new Set(vp.map(v=>v.edad))].sort((a,b)=>a-b);
-  tabla('II-c. CPOD por cada edad registrada',vp,[['C','C'],['Pp','P'],['O','O'],['CPOD','CPOD'],['CPOS','CPOS']],ages.map(a=>[a,a]));
+  tabla('II-c. CPOD por cada edad registrada',vp,[['C','C'],['Pp','P'],['O','O'],['CPOD','CPOD'],['CPOS','CPOS']],ages.map(a=>[a,a]),noteP)}
   // por sexo y grado
-  const grp=(title,key,set,keys)=>{const head=[[title.split(' por ')[1]||'Grupo','N.º','CPOD Prom.','CPOD D.E.','CPOS Prom.','Con experiencia de caries','%']];const rows=[];
-    keys.concat([null]).forEach(k=>{const sub=k==null?set:set.filter(v=>v[key]===k);const e=sub.filter(v=>v.CPOD>0).length;const a=st(sub.map(v=>v.CPOD)),b=st(sub.map(v=>v.CPOS));rows.push([k==null?'Total':k,sub.length,a.m,a.sd,b.m,e,sub.length?e/sub.length:null])});
-    M.push({title,head,rows,tot:true,num:true,pct:[6]})};
-  grp('CPOD por sexo','sexo',vp,['Femenino','Masculino']);
-  grp('CPOD por grado (referencial)','grado',vp,[...new Set(vp.map(v=>v.grado))].sort());
+  const grp=(title,key,set,keys,I,IS,note)=>{I=I||'CPOD';IS=IS||'CPOS';const head=[[title.split(' por ')[1]||'Grupo','N.º',I+' Prom.',I+' D.E.',IS+' Prom.','Con experiencia de caries','%']];const rows=[];
+    keys.concat([null]).forEach(k=>{const sub=k==null?set:set.filter(v=>v[key]===k);const e=sub.filter(v=>v[I]>0).length;const a=st(sub.map(v=>v[I])),b=st(sub.map(v=>v[IS]));rows.push([k==null?'Total':k,sub.length,a.m,a.sd,b.m,e,sub.length?e/sub.length:null])});
+    M.push({title,note,head,rows,tot:true,num:true,pct:[6]})};
+  if(SD){grp('ceod por sexo','sexo',vd,['Femenino','Masculino'],'ceod','ceos',noteD);grp('ceod por grado (referencial)','grado',vd,[...new Set(vd.map(v=>v.grado))].sort(),'ceod','ceos',noteD)}
+  if(SP){grp('CPOD por sexo','sexo',vp,['Femenino','Masculino'],'CPOD','CPOS',noteP);grp('CPOD por grado (referencial)','grado',vp,[...new Set(vp.map(v=>v.grado))].sort(),'CPOD','CPOS',noteP)}
   // prevalencia
   const sumk=(set,k)=>set.reduce((a,v)=>a+(v[k]||0),0);
   const totC=sumk(vp,'C'),totCPOD=sumk(vp,'CPOD');
-  M.push({title:'Prevalencia de caries y composición del CPOD',head:[['Indicador','Valor']],rows:[
+  const totc=sumk(vd,'c'),totceod=sumk(vd,'ceod');
+  if(!SD)M.push({title:'Prevalencia de caries y composición del CPOD',head:[['Indicador','Valor']],rows:[
+    ['Examinados con dentición permanente o mixta',vp.length],['Con experiencia de caries (CPOD > 0)',expP],['Prevalencia de experiencia de caries (CPOD)',vp.length?expP/vp.length:null],['Libres de caries (CPOD = 0)',vp.length-expP],
+    ['% del CPOD que es caries activa (C)',totCPOD?totC/totCPOD:null],['% del CPOD que son piezas perdidas (P)',totCPOD?sumk(vp,'Pp')/totCPOD:null],['% del CPOD que son obturadas (O)',totCPOD?sumk(vp,'O')/totCPOD:null],
+    ['Superficies permanentes sanas para sellantes (NSPSS)',vp.reduce((a,v)=>a+calc(v.r).p.sell,0)]],pctRows:[2,4,5,6],num:true});
+  else if(!SP)M.push({title:'Prevalencia de caries y composición del ceod',head:[['Indicador','Valor']],rows:[
+    ['Examinados con dentición decidua o mixta',vd.length],['Con experiencia de caries (ceod > 0)',expD],['Prevalencia de experiencia de caries (ceod)',vd.length?expD/vd.length:null],['Libres de caries (ceod = 0)',vd.length-expD],
+    ['% del ceod que es caries activa (c)',totceod?totc/totceod:null],['% del ceod que son piezas con extracción indicada (e)',totceod?sumk(vd,'e')/totceod:null],['% del ceod que son obturadas (o)',totceod?sumk(vd,'o')/totceod:null]],pctRows:[2,4,5,6],num:true});
+  else M.push({title:'Prevalencia de caries y composición del CPOD y ceod',head:[['Indicador','Valor']],rows:[
     ['Examinados (diagnóstico)',V.length],['Con experiencia de caries (CPOD o ceod > 0)',exp],['Prevalencia de experiencia de caries',kp.prev],['Libres de caries (CPOD y ceod = 0)',V.length-exp],
     ['% del CPOD que es caries activa (C)',totCPOD?totC/totCPOD:null],['% del CPOD que son piezas perdidas (P)',totCPOD?sumk(vp,'Pp')/totCPOD:null],['% del CPOD que son obturadas (O)',totCPOD?sumk(vp,'O')/totCPOD:null],
-    ['Superficies permanentes sanas para sellantes (NSPSS)',dx.reduce((a,r)=>a+calc(r).p.sell,0)]],pctRows:[2,4,5,6],num:true});
+    ['% del ceod que es caries activa (c)',totceod?totc/totceod:null],
+    ['Superficies permanentes sanas para sellantes (NSPSS)',vp.reduce((a,v)=>a+calc(v.r).p.sell,0)]],pctRows:[2,4,5,6,7],num:true});
   // IHO
   const ihoVal=r=>{const I=ihoInfo(r);if(I.na)return null;return metric==='ipb'?I.ipb:(I.full?I.iho:null)};
   const ihoCls=x=>x==null?null:metric==='ipb'?(x<=0.6?'Bueno':x<=1.8?'Regular':'Malo'):(x<=1.2?'Bueno':x<=3?'Regular':'Malo');
@@ -1363,10 +1379,16 @@ function renderRes(){
   resModel=M;
   // ----- render -----
   const body=$('#resBody');let h='';
-  h+='<div class="card"><div class="kpi"><div><b>'+kp.n+'</b><span class="muted">diagnósticos</span></div><div><b>'+f2(kp.cpod)+'</b><span class="muted">CPOD promedio</span></div><div><b>'+f2(kp.ceod)+'</b><span class="muted">ceod promedio</span></div><div><b>'+f1p(kp.prev)+'</b><span class="muted">con experiencia de caries</span></div><div><b>'+C.length+'</b><span class="muted">CAPSO registrados</span></div></div></div>';
+  {const K=[];K.push(['<b>'+kp.n+'</b>','diagnósticos'+ageLab]);
+   if(SP)K.push(['<b>'+f2(kp.cpod)+'</b>','CPOD promedio (n = '+vp.length+')']);
+   if(SD)K.push(['<b>'+f2(kp.ceod)+'</b>','ceod promedio (n = '+vd.length+')']);
+   const pv=SP&&SD?kp.prev:SP?(vp.length?expP/vp.length:null):(vd.length?expD/vd.length:null);
+   K.push(['<b>'+f1p(pv)+'</b>','con experiencia de caries'+(SP&&SD?'':SP?' (CPOD > 0)':' (ceod > 0)')]);K.push(['<b>'+C.length+'</b>','CAPSO registrados']);
+   h+='<div class="card"><div class="kpi">'+K.map(k=>'<div>'+k[0]+'<span class="muted">'+esc(k[1])+'</span></div>').join('')+'</div>'+(nDonly&&SP?'<div class="muted" style="margin-top:8px;font-size:13px">Las tablas CPOD suman '+vp.length+' y no '+V.length+' porque '+nDonly+' '+(nDonly===1?'persona tiene':'personas tienen')+' solo dentición decidua (se cuenta'+(nDonly===1?'':'n')+' en el ceod).</div>':'')+'</div>'}
   // gráficos
   const ch=[];
-  if(vp.length)ch.push(barChart('Composición del CPOD (promedio)',[{lab:'C',v:st(vp.map(v=>v.C)).m,c:'var(--c1)'},{lab:'P',v:st(vp.map(v=>v.Pp)).m,c:'#8b919a'},{lab:'O',v:st(vp.map(v=>v.O)).m,c:'var(--c3)'},{lab:'CPOD',v:st(vp.map(v=>v.CPOD)).m,c:'var(--ac)'}]));
+  if(SD&&vd.length)ch.push(barChart('Composición del ceod (promedio)',[{lab:'c',v:st(vd.map(v=>v.c)).m,c:'var(--c1)'},{lab:'e',v:st(vd.map(v=>v.e)).m,c:'#8b919a'},{lab:'o',v:st(vd.map(v=>v.o)).m,c:'var(--c3)'},{lab:'ceod',v:st(vd.map(v=>v.ceod)).m,c:'var(--ac)'}]));
+  if(SP&&vp.length)ch.push(barChart('Composición del CPOD (promedio)',[{lab:'C',v:st(vp.map(v=>v.C)).m,c:'var(--c1)'},{lab:'P',v:st(vp.map(v=>v.Pp)).m,c:'#8b919a'},{lab:'O',v:st(vp.map(v=>v.O)).m,c:'var(--c3)'},{lab:'CPOD',v:st(vp.map(v=>v.CPOD)).m,c:'var(--ac)'}]));
   const im=byT.map(s=>st(s.map(ihoVal)).m);if(im.some(x=>x!=null))ch.push(barChart(ML+' promedio por toma (menor es mejor)',T_IHO.map((t,i)=>({lab:['Dx','Control 1','Control 2'][i],v:im[i],c:['#8b919a','var(--c3)','var(--c6)'][i]}))));
   if(C.length){const ks=CAP_CON;ch.push(groupChart('CAPSO: % que sabe por pregunta (conocimientos)',ks.map(k=>k.replace('p10.','6.').replace('p10','6').replace(/^p(\d+)$/,(m,n)=>'P'+({5:1,6:2,7:3,8:4,9:5}[n]||n))),capT.slice(0,2).map((s,i)=>({lab:i?'CAPSO 2':'CAPSO 1',c:i?'var(--c6)':'#8b919a',vals:ks.map(k=>{const a=s.filter(r=>capCode(k,(r.resp||{})[k])!=null);return a.length?a.filter(r=>capCode(k,r.resp[k])===0).length/a.length:null})}))))}
   if(ch.length)h+='<div class="card"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">'+ch.join('')+'</div></div>';
@@ -1391,7 +1413,7 @@ function groupChart(title,labels,series){const W=320,H=150,n=labels.length,gw=W/
   labels.forEach((l,i)=>{series.forEach((se,j)=>{const v=se.vals[i];if(v==null)return;const h=v*H,x=i*gw+gw*0.1+j*bw;s+='<rect x="'+x+'" y="'+(H-h)+'" width="'+(bw-1)+'" height="'+h+'" fill="'+se.c+'"><title>'+esc(se.lab+' '+l+': '+f1p(v))+'</title></rect>'});s+='<text x="'+(i*gw+gw/2)+'" y="'+(H+14)+'" text-anchor="middle" font-size="10" fill="var(--tx2)">'+esc(l)+'</text>'});
   s+='<line x1="0" y1="'+H+'" x2="'+W+'" y2="'+H+'" stroke="var(--bd2)"/>';series.forEach((se,j)=>{s+='<rect x="'+(j*90)+'" y="'+(H+22)+'" width="10" height="10" fill="'+se.c+'"/><text x="'+(j*90+14)+'" y="'+(H+31)+'" font-size="11" fill="var(--tx)">'+esc(se.lab)+'</text>'});
   return s+'</svg></div>'}
-$('#rCol').onchange=renderRes;$('#rIho').onchange=renderRes;
+$('#rComp').onchange=renderRes;$('#rEdad').onchange=renderRes;$('#rE1').oninput=renderRes;$('#rE2').oninput=renderRes;
 $('#rXlsx').onclick=async()=>{const m=$('#rMsg');
   try{await loadXLSX();const wb=XLSX.utils.book_new();const aoa=[];
     resModel.forEach(t=>{aoa.push([t.title]);if(t.note)aoa.push([t.note]);t.head.forEach(r=>aoa.push(r));t.rows.forEach(r=>{if(r.sec){aoa.push([r.sec]);return}aoa.push(r.map(v=>typeof v==='number'?Math.round(v*10000)/10000:(v==null?'':v)))});aoa.push([])});
