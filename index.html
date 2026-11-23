@@ -1536,7 +1536,7 @@ onAuthStateChanged(auth,u=>{
     updatePill();renderList();
   },err=>{if(err&&err.code==='permission-denied'){readOnly=true}dbState='offline';updatePill()});
   flush();
-  if(!ENV.suffix)setTimeout(migrateBeta,1500);
+  /* copia automática desde la BETA desactivada por decisión del usuario (22/11/2026): nunca migrar datos de la BETA */
 });
 /* ---- escáner de fichas (solo con internet) ---- */
 const SCAN_URL=CFG.SCAN_URL||'';
@@ -1931,17 +1931,6 @@ $('#padFile').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f
 if(!ENV.suffix){
   try{const bp=LS.get('cpodb_pending',{});let k=0;for(const [id,v] of Object.entries(bp)){if(!pending[id]){pending[id]=v;k++}}if(k)LS.set(LSP+'pending',pending);
     if(!localStorage.getItem(LSP+'dict')&&localStorage.getItem('cpodb_dict'))localStorage.setItem(LSP+'dict',localStorage.getItem('cpodb_dict'))}catch(e){}
-}
-async function migrateBeta(){
-  if(ENV.suffix||!db||LS.get(LSP+'migrBeta',null))return;
-  try{
-    const [rs,cs,ro,co]=await Promise.all(['registros_beta','capso_beta',COL_R,COL_C].map(c=>getDocsFromServer(collection(fs,c))));
-    const have={};[ro,co].forEach(sn=>sn.docs.forEach(d=>have[d.id]=(d.data()||{}).actualizado||0));
-    let n=0;
-    [[rs,false],[cs,true]].forEach(([sn,isC])=>sn.docs.forEach(d=>{const v=d.data();if(!v)return;if(have[d.id]!=null&&have[d.id]>=(v.actualizado||0))return;if(isC)v._t='capso';if(!pending[d.id]){pending[d.id]=v;n++}}));
-    LS.set(LSP+'pending',pending);LS.set(LSP+'migrBeta',{fecha:Date.now(),copiados:n,beta:rs.size+cs.size});
-    if(n){flush();const m=$('#saveMsg');m.className='msg ok';m.textContent='Se copiaron '+n+' registros de la versión BETA a esta versión.';m.classList.remove('hide')}
-  }catch(e){/* sin señal: se reintenta en la próxima apertura */}
 }
 
 /* ---------- service worker (sin señal + actualizaciones) ---------- */
