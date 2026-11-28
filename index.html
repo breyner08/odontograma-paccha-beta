@@ -1291,7 +1291,8 @@ function renderRes(){
   const nDonly=V.filter(v=>!v.P).length,nPonly=V.filter(v=>!v.D).length;
   // tablas Anexo 2
   const ag=a=>a[0]===a[1]?String(a[0]):a[0]+' - '+a[1];
-  const EDc=[[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12]],EDC=EDc.concat([[15,15],[35,44],[65,74]]);
+  const EDc=[[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12]],EDC=EDc.concat([[15,15],[35,44],[65,74]]);
+  const ageRange=set=>{const mx=Math.max(12,...set.map(v=>v.edad).filter(x=>!isNaN(x)));const lo=Math.max(3,ev?e1:3),hi=ev&&e2<200?e2:mx;const o=[];for(let a=lo;a<=hi;a++)o.push([a,a]);return o};
   const tabla=(title,set,comps,ages,note)=>{if(!set.length){M.push({title,note:'Sin registros con esta dentición'+(ev?' en este rango de edad':'')+'.',head:[['—']],rows:[]});return}const head=[['Edad','N.º examinados',...comps.flatMap(c=>[c[1]+' Prom.',c[1]+' D.E.'])]];const rows=[];
     ages.concat([null]).forEach(a=>{const sub=a?set.filter(v=>v.edad>=a[0]&&v.edad<=a[1]):set;const row=[a?ag(a):'Total',sub.length];comps.forEach(c=>{const s=st(sub.map(v=>v[c[0]]));row.push(s.m,s.sd)});rows.push(row)});
     M.push({title,note,head,rows,tot:true,num:true})};
@@ -1300,11 +1301,10 @@ function renderRes(){
   const ceodT=()=>{tabla('I. Índice ceod en la población (Anexo 2)',vd,[['c','c'],['e','e'],['o','o'],['ceod','ceod'],['sd','Piezas deciduas sanas']],EDc,noteD);
   tabla('I-b. Índice ceos (superficies deciduas)',vd,[['cs','cs'],['es','es'],['os','os'],['ceos','ceos'],['ssd','Superficies deciduas sanas']],EDc,noteD)};
   if(SD)ceodT();
-  if(SD){const agesD=[...new Set(vd.map(v=>v.edad))].sort((a,b)=>a-b);tabla('I-c. ceod por cada edad registrada',vd,[['c','c'],['e','e'],['o','o'],['ceod','ceod'],['ceos','ceos']],agesD.map(a=>[a,a]),noteD)}
+  if(SD)tabla('I-c. ceod por edad (desde los 3 años)',vd,[['c','c'],['e','e'],['o','o'],['ceod','ceod'],['ceos','ceos']],ageRange(vd),noteD);
   if(SP){tabla('II. Índice CPOD en la población (Anexo 2)',vp,[['C','C'],['Pp','P'],['O','O'],['CPOD','CPOD'],['SP','Piezas permanentes sanas']],EDC,noteP);
   tabla('II-b. Índice CPOS (superficies permanentes)',vp,[['CS','CS'],['PS','PS'],['OS','OS'],['CPOS','CPOS'],['SSP','Superficies permanentes sanas']],EDC,noteP);
-  const ages=[...new Set(vp.map(v=>v.edad))].sort((a,b)=>a-b);
-  tabla('II-c. CPOD por cada edad registrada',vp,[['C','C'],['Pp','P'],['O','O'],['CPOD','CPOD'],['CPOS','CPOS']],ages.map(a=>[a,a]),noteP)}
+  tabla('II-c. CPOD por edad (desde los 3 años)',vp,[['C','C'],['Pp','P'],['O','O'],['CPOD','CPOD'],['CPOS','CPOS']],ageRange(vp),noteP)}
   // por sexo y grado
   const grp=(title,key,set,keys,I,IS,note)=>{I=I||'CPOD';IS=IS||'CPOS';const head=[[title.split(' por ')[1]||'Grupo','N.º',I+' Prom.',I+' D.E.',IS+' Prom.','Con experiencia de caries','%']];const rows=[];
     keys.concat([null]).forEach(k=>{const sub=k==null?set:set.filter(v=>v[key]===k);const e=sub.filter(v=>v[I]>0).length;const a=st(sub.map(v=>v[I])),b=st(sub.map(v=>v[IS]));rows.push([k==null?'Total':k,sub.length,a.m,a.sd,b.m,e,sub.length?e/sub.length:null])});
